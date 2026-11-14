@@ -34,5 +34,5 @@ deploy.cmd                                             # build the component, th
 ## Conventions
 
 - Follow OutputToFile's code style: tabs for indentation, namespace `LiveSplit.UI.Components.SplitSpammer`, an old-style csproj that lists every source file, and thread rules (LiveSplit's event handlers may run on another thread, so they only count; the work happens elsewhere).
-- Only GTA SA PC version 1.0 is supported.
+- Only GTA SA PC version 1.0 is supported. It is recognised by the main module's size (18313216) or the int 38079 at `+0x4245BC` or `+0x42457C`; the size is needed because the int isn't there while the game checks the CD. The game's memory is read through `IGameReader` (`ProcessGameReader` uses its own ReadProcessMemory calls, not LiveSplit.ComponentUtil, which isn't a separate DLL). SCM globals are at module `+0x649960 + n*4` and mission locals at `+0x648960 + n*4`.
 - Split and setting IDs match the ASL's (a short lowercase mission abbreviation plus `_event`, such as `intro_passed`), so recorded fixtures and users' habits carry over.

@@ -2,21 +2,9 @@
 
 Detail for the component rows of [TODO.md](TODO.md).
 
-Dependencies: CSP comes first, because everything else needs a project that builds. TST follows, so each later item is built with tests. STR and RDR are independent of each other. ENG needs RDR's reader interface and STR's settings snapshot. ITB is the first real mission and needs ENG. STT and MIS build on ITB. The shared design facts are in the sections where they matter: the threading rules in ENG, the settings semantics in STR, the reading and version check in RDR.
+Dependencies: TST comes first, so each later item is built with tests. ENG needs the game reader (`IGameReader`) and STR's settings snapshot. ITB is the first real mission and needs ENG. STT and MIS build on ITB. The shared design facts are in the sections where they matter: the threading rules in ENG, the settings semantics in STR, the reading and version check in RDR.
 
 Everything here is read, not reproduced: the repo has no code yet. Facts about the ASL come from `reference\GTASA.asl` (see `reference\README.md`), read 2026-11-14, and about how a component is built from `D:\Repositories\LiveSplit.OutputToFile`.
-
-## CSP — Check that the component loads in LiveSplit
-
-The skeleton exists: `LiveSplit.SplitSpammer.csproj` and `.sln`, the factory ("Split Spammer", Control category), a component that draws and does nothing, a settings panel that says there is nothing to configure, and `deploy.cmd`. It builds and passes a headless smoke test, but has never been loaded in LiveSplit.
-
-**Evidence:** reproduced 2026-11-14: `dotnet build` with no warnings in Debug and Release, and a scratch program that loads the DLL, creates the factory and component, opens the settings control, round-trips the settings XML and disposes it. Not run inside LiveSplit.
-
-**Plan:** close LiveSplit, run `deploy.cmd` (it refuses while LiveSplit runs and copies the DLL into `Components`), open LiveSplit, add Split Spammer under Control in the layout editor, open its settings, remove it, and check that LiveSplit shows no errors and still closes cleanly.
-
-**Verify:** as the plan: the component appears, adds, shows its settings panel and removes without errors.
-
-**Docs when done:** none beyond logging it in DONE.md.
 
 ## TST — Headless test project
 
@@ -24,7 +12,7 @@ There is no test project. OutputToFile drives its component headless through Liv
 
 **Evidence:** read 2026-11-14 in OutputToFile's `Tests\` and docs/testing.md.
 
-**Plan:** `Tests\LiveSplit.SplitSpammer.Tests.csproj`, SDK-style, net481, xunit 2.9.2 with the test SDK and runner, referencing the component project and, copied into its own output, `LiveSplit.Core.dll` and `UpdateManager.dll`. A `TestRun` helper builds a run and a `LiveSplitState`, creates the component with a fake game reader (see RDR), plays timer actions through `TimerModel`, and ticks the poll step by hand instead of running its thread. Add `docs\testing.md` in the style of OutputToFile's.
+**Plan:** `Tests\LiveSplit.SplitSpammer.Tests.csproj`, SDK-style, net481, xunit 2.9.2 with the test SDK and runner, referencing the component project and, copied into its own output, `LiveSplit.Core.dll` and `UpdateManager.dll`. A `TestRun` helper builds a run and a `LiveSplitState`, creates the component with a fake `IGameReader`, plays timer actions through `TimerModel`, and ticks the poll step by hand instead of running its thread. Add `docs\testing.md` in the style of OutputToFile's.
 
 **Verify:** `dotnet test` builds and runs a first test that adds the component, ticks it and checks nothing throws.
 
@@ -46,18 +34,6 @@ The ASL has about 770 settings in a tree; LiveSplit's own settings dialog for th
 **Verify:** tests for the XML round trip and defaults for missing keys, effectiveness with ancestors, check, uncheck and reset of a branch, and the snapshot being a copy; by hand in LiveSplit that the tree collapses and expands and the tooltips show. Settings ids, labels, defaults, tooltips and parents are compared with the ASL's records for the missions that exist (see ITB).
 
 **Docs when done:** README (the settings), CLAUDE.md (how to add a setting, as OutputToFile's CLAUDE.md does).
-
-## RDR — Game reader for the supported version
-
-The ASL attaches to the game by two executable names, detects the version, and reads through LiveSplit.ComponentUtil. Only PC 1.0 is supported.
-
-**Evidence:** read 2026-11-14 in `GTASA.asl`: the `state("gta_sa")` and `state("gta-sa")` blocks and `init`.
-
-**Plan:** an `IGameReader` interface that the logic reads through (module-relative reads of ints, SCM globals at `0x649960 + n*4`, SCM mission locals at `0x648960 + n*4`, strings later), a `ProcessGameReader` that attaches to `gta_sa.exe` or `gta-sa.exe`, accepts the game only when the module size is 18313216 or the int 38079 is at `+0x4245BC` or `+0x42457C` (the value is not there yet while the game is still checking the CD, hence the module size), and reports Waiting, Found or Unsupported for a status line in the settings. A fake reader for tests. The game process can be 32-bit while LiveSplit is 64-bit; the ASL does the same with the same calls.
-
-**Verify:** tests for the version check against a fake module, and a reader that fails never throws out of a read; by hand that the status line finds the game.
-
-**Docs when done:** CLAUDE.md (the supported version and addresses).
 
 ## ENG — Split engine and poll thread
 

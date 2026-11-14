@@ -1,6 +1,7 @@
 using LiveSplit.Model;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Xml;
@@ -8,13 +9,19 @@ using System.Xml;
 namespace LiveSplit.UI.Components.SplitSpammer
 {
 	/// <summary>
-	/// The LiveSplit side of the component. It draws nothing and, for now, does nothing: this is the skeleton
+	/// The LiveSplit side of the component. It draws nothing; for now it only looks for the game: this is the skeleton
 	/// the auto splitter is built on (see docs/TODO.md).
 	/// </summary>
 	public class SplitSpammerComponent : IComponent
 	{
 		public SplitSpammerSettings Settings { get; set; }
 		protected LiveSplitState State { get; set; }
+
+		// Refreshed from Update, which runs on the UI thread; the poll thread comes with item ENG
+		readonly ProcessGameReader reader = new ProcessGameReader();
+		readonly Stopwatch refreshTimer = Stopwatch.StartNew();
+		bool refreshedOnce;
+		const int RefreshIntervalMs = 1000;
 
 		public string ComponentName => "Split Spammer";
 
@@ -47,13 +54,22 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 		public void SetSettings(XmlNode settings) => Settings.SetSettings(settings);
 
-		// Called every frame, on the UI thread. Nothing to do yet.
-		public void Update(IInvalidator invalidator, LiveSplitState state, float width, float height, LayoutMode mode) { }
+		// Called every frame, on the UI thread. Looks for the game about once a second.
+		public void Update(IInvalidator invalidator, LiveSplitState state, float width, float height, LayoutMode mode)
+		{
+			if (refreshedOnce && refreshTimer.ElapsedMilliseconds < RefreshIntervalMs)
+				return;
+			refreshedOnce = true;
+			refreshTimer.Restart();
+			reader.Refresh();
+			Settings.SetGameStatus(reader.Status);
+		}
 
 		public int GetSettingsHashCode() => Settings.GetSettingsHashCode();
 
 		public void Dispose()
 		{
+			reader.Dispose();
 			Settings.Dispose();
 		}
 	}

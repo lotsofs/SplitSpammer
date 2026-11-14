@@ -50,6 +50,9 @@
   <ItemGroup>
     <!-- Old-style project: every source file is listed here, or it isn't built -->
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="UI\Components\Game\GameVersion.cs" />
+    <Compile Include="UI\Components\Game\IGameReader.cs" />
+    <Compile Include="UI\Components\Game\ProcessGameReader.cs" />
     <Compile Include="UI\Components\SplitSpammerComponent.cs" />
     <Compile Include="UI\Components\SplitSpammerFactory.cs" />
     <Compile Include="UI\Components\SplitSpammerSettings.cs" />

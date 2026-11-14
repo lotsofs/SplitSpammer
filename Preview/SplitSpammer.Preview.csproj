@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- A stand-alone window that shows the component's settings panel without LiveSplit. Run it with: deploy -p -->
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <OutputType>WinExe</OutputType>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>LiveSplit.UI.Components.SplitSpammer.Preview</RootNamespace>
+    <!-- LiveSplit's folder, as in the component's csproj: set it with -p:LiveSplitDir=<folder> or a LiveSplitDir environment variable -->
+    <LiveSplitDir Condition=" '$(LiveSplitDir)' == '' ">$(MSBuildProjectDirectory)\..\..\..\Programs\Streaming\LiveSplit</LiveSplitDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Copied into the output, unlike the component's references: this runs outside LiveSplit -->
+    <Reference Include="LiveSplit.Core">
+      <HintPath>$(LiveSplitDir)\LiveSplit.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="UpdateManager">
+      <HintPath>$(LiveSplitDir)\UpdateManager.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Windows.Forms" />
+    <ProjectReference Include="..\LiveSplit.SplitSpammer.csproj" />
+  </ItemGroup>
+</Project>

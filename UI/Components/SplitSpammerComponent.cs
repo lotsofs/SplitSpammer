@@ -19,6 +19,10 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 		// Refreshed from Update, which runs on the UI thread; the poll thread comes with item ENG
 		readonly ProcessGameReader reader = new ProcessGameReader();
+		// The settings in effect. The UI thread replaces it whole on every change; the poll thread (item ENG) only reads it.
+		volatile SettingsSnapshot snapshot;
+		public SettingsSnapshot Snapshot => snapshot;
+
 		readonly Stopwatch refreshTimer = Stopwatch.StartNew();
 		bool refreshedOnce;
 		const int RefreshIntervalMs = 1000;
@@ -41,7 +45,9 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		public SplitSpammerComponent(LiveSplitState state)
 		{
 			State = state;
-			Settings = new SplitSpammerSettings();
+			Settings = new SplitSpammerSettings(SettingsTree.Build());
+			Settings.SettingsChanged += (sender, e) => snapshot = Settings.State.Snapshot();
+			snapshot = Settings.State.Snapshot();
 		}
 
 		public void DrawHorizontal(Graphics g, LiveSplitState state, float height, Region clipRegion) { }

@@ -53,6 +53,10 @@
     <Compile Include="UI\Components\Game\GameVersion.cs" />
     <Compile Include="UI\Components\Game\IGameReader.cs" />
     <Compile Include="UI\Components\Game\ProcessGameReader.cs" />
+    <Compile Include="UI\Components\Settings\SettingNode.cs" />
+    <Compile Include="UI\Components\Settings\SettingsSnapshot.cs" />
+    <Compile Include="UI\Components\Settings\SettingsState.cs" />
+    <Compile Include="UI\Components\Settings\SettingsTree.cs" />
     <Compile Include="UI\Components\SplitSpammerComponent.cs" />
     <Compile Include="UI\Components\SplitSpammerFactory.cs" />
     <Compile Include="UI\Components\SplitSpammerSettings.cs" />

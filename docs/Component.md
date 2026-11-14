@@ -2,7 +2,7 @@
 
 Detail for the component rows of [TODO.md](TODO.md).
 
-Dependencies: TST comes first, so each later item is built with tests. ENG needs the game reader (`IGameReader`) and STR's settings snapshot. ITB is the first real mission and needs ENG. STT and MIS build on ITB. The shared design facts are in the sections where they matter: the threading rules in ENG, the settings semantics in STR, the reading and version check in RDR.
+Dependencies: TST comes first, so each later item is built with tests. ENG needs the game reader (`IGameReader`) and the settings snapshot (`SettingsSnapshot`). ITB is the first real mission and needs ENG. STT and MIS build on ITB. The shared design facts are in the sections where they matter: the threading rules in ENG, the settings semantics in STR, the reading and version check in RDR.
 
 Everything here is read, not reproduced: the repo has no code yet. Facts about the ASL come from `reference\GTASA.asl` (see `reference\README.md`), read 2026-11-14, and about how a component is built from `D:\Repositories\LiveSplit.OutputToFile`.
 
@@ -12,28 +12,11 @@ There is no test project. OutputToFile drives its component headless through Liv
 
 **Evidence:** read 2026-11-14 in OutputToFile's `Tests\` and docs/testing.md.
 
-**Plan:** `Tests\LiveSplit.SplitSpammer.Tests.csproj`, SDK-style, net481, xunit 2.9.2 with the test SDK and runner, referencing the component project and, copied into its own output, `LiveSplit.Core.dll` and `UpdateManager.dll`. A `TestRun` helper builds a run and a `LiveSplitState`, creates the component with a fake `IGameReader`, plays timer actions through `TimerModel`, and ticks the poll step by hand instead of running its thread. Add `docs\testing.md` in the style of OutputToFile's.
+**Plan:** `Tests\LiveSplit.SplitSpammer.Tests.csproj`, SDK-style, net481, xunit 2.9.2 with the test SDK and runner, referencing the component project and, copied into its own output, `LiveSplit.Core.dll` and `UpdateManager.dll`. A `TestRun` helper builds a run and a `LiveSplitState`, creates the component with a fake `IGameReader`, plays timer actions through `TimerModel`, and ticks the poll step by hand instead of running its thread. Add tests for `SettingsState` and the settings XML (defaults, effective only with ancestors checked, branch check, uncheck and reset, the snapshot being a copy, the XML round trip with an unknown id, a bad value and an old layout). Add `docs\testing.md` in the style of OutputToFile's.
 
 **Verify:** `dotnet test` builds and runs a first test that adds the component, ticks it and checks nothing throws.
 
 **Docs when done:** CLAUDE.md (test command), docs/testing.md.
-
-## STR — Collapsible settings tree saved in the layout
-
-The ASL has about 770 settings in a tree; LiveSplit's own settings dialog for the auto-splitting runtime is a flat table with no collapsing, which is why this component exists. In the ASL a setting splits only when it and all its ancestors are checked.
-
-**Evidence:** read 2026-11-14: `settings.Add` calls in `GTASA.asl`; the runtime component's settings dialog source (flat labels, 20 pixels of indent per title level, no collapse); the ASL runtime's recursive "this setting and all its parents" rule.
-
-**Plan:**
-- A `SettingNode` (id, label, default, tooltip, children) and a `SettingsTree` built from the mission modules' definitions, in the ASL's order, with the ASL's ids, labels, defaults and tooltips.
-- A settings `UserControl` built in code (no designer) around a `TreeView` with checkboxes, tooltips, and a right-click menu: Expand tree, Collapse tree, Check branch, Uncheck branch, Reset to default.
-- A setting is effective only when it and all its ancestors are checked. Unchecking a group keeps its children's own states.
-- Saved in the layout XML keyed by setting id, like OutputToFile's settings; a missing key takes the default, so layouts saved before an id existed still load. Collapsed state is not saved.
-- The UI thread publishes an immutable snapshot of the effective settings, replaced as a whole on each change, for the poll thread to read (see ENG).
-
-**Verify:** tests for the XML round trip and defaults for missing keys, effectiveness with ancestors, check, uncheck and reset of a branch, and the snapshot being a copy; by hand in LiveSplit that the tree collapses and expands and the tooltips show. Settings ids, labels, defaults, tooltips and parents are compared with the ASL's records for the missions that exist (see ITB).
-
-**Docs when done:** README (the settings), CLAUDE.md (how to add a setting, as OutputToFile's CLAUDE.md does).
 
 ## ENG — Split engine and poll thread
 

@@ -8,4 +8,4 @@ It replaces an ASL auto splitter script that has outgrown a single ASL file.
 
 ## Status
 
-Not usable yet: there is an empty component skeleton that loads in LiveSplit and does nothing, and no release. The planned work is listed in [docs/TODO.md](docs/TODO.md).
+Not usable yet: the component loads in LiveSplit and shows the game's status and a tree of settings (so far only the group headers), but it does not split yet, and there is no release. The planned work is listed in [docs/TODO.md](docs/TODO.md).

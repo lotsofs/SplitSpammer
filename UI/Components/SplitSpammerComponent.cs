@@ -1,31 +1,38 @@
 using LiveSplit.Model;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
+using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
 
 namespace LiveSplit.UI.Components.SplitSpammer
 {
 	/// <summary>
-	/// The LiveSplit side of the component. It draws nothing; for now it only looks for the game: this is the skeleton
-	/// the auto splitter is built on (see docs/TODO.md).
+	/// The LiveSplit side of the component. It draws nothing. A poll thread (EnginePoller) reads the game and runs the
+	/// SplitEngine; this class only wires it to LiveSplit. See docs/architecture.md.
 	/// </summary>
 	public class SplitSpammerComponent : IComponent
 	{
 		public SplitSpammerSettings Settings { get; set; }
 		protected LiveSplitState State { get; set; }
 
-		// Refreshed from Update, which runs on the UI thread; the poll thread comes with item ENG
 		readonly ProcessGameReader reader = new ProcessGameReader();
-		// The settings in effect. The UI thread replaces it whole on every change; the poll thread (item ENG) only reads it.
+		readonly SplitEngine engine;
+		readonly EnginePoller poller;
+		readonly TimerModel timerModel;
+		// The UI thread's context, captured where LiveSplit creates the component, so the poll thread can split on it
+		readonly SynchronizationContext uiContext = SynchronizationContext.Current;
+		// Counts timer resets. The handler runs on any thread (LiveSplit's server raises events on its own), so it only counts.
+		int resets;
+		GameStatus shownStatus = GameStatus.Waiting;
+
+		// The settings in effect. The UI thread replaces it whole on every change; the poll thread only reads it.
 		volatile SettingsSnapshot snapshot;
 		public SettingsSnapshot Snapshot => snapshot;
 
-		readonly Stopwatch refreshTimer = Stopwatch.StartNew();
-		bool refreshedOnce;
-		const int RefreshIntervalMs = 1000;
+		/// <summary>The engine, for the mission modules to add their watchers and checks to.</summary>
+		public SplitEngine Engine => engine;
 
 		public string ComponentName => "Split Spammer";
 
@@ -48,6 +55,12 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			Settings = new SplitSpammerSettings(SettingsTree.Build());
 			Settings.SettingsChanged += (sender, e) => snapshot = Settings.State.Snapshot();
 			snapshot = Settings.State.Snapshot();
+
+			timerModel = new TimerModel { CurrentState = state };
+			engine = new SplitEngine(reader, () => snapshot);
+			state.OnReset += State_OnReset;
+			poller = new EnginePoller(reader, engine, () => Volatile.Read(ref resets), SplitOnUiThread);
+			poller.Start();
 		}
 
 		public void DrawHorizontal(Graphics g, LiveSplitState state, float height, Region clipRegion) { }
@@ -60,21 +73,33 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 		public void SetSettings(XmlNode settings) => Settings.SetSettings(settings);
 
-		// Called every frame, on the UI thread. Looks for the game about once a second.
+		void State_OnReset(object sender, TimerPhase e) => Interlocked.Increment(ref resets);
+
+		// Runs on the poll thread. TimerModel and the timer's events belong to the UI thread.
+		void SplitOnUiThread()
+		{
+			if (uiContext != null)
+				uiContext.Post(_ => timerModel.Split(), null);
+			else
+				timerModel.Split();
+		}
+
+		// Called every frame, on the UI thread. Cheap: the work is on the poll thread. Shows the game's status.
 		public void Update(IInvalidator invalidator, LiveSplitState state, float width, float height, LayoutMode mode)
 		{
-			if (refreshedOnce && refreshTimer.ElapsedMilliseconds < RefreshIntervalMs)
+			GameStatus status = reader.Status;
+			if (status == shownStatus)
 				return;
-			refreshedOnce = true;
-			refreshTimer.Restart();
-			reader.Refresh();
-			Settings.SetGameStatus(reader.Status);
+			shownStatus = status;
+			Settings.SetGameStatus(status);
 		}
 
 		public int GetSettingsHashCode() => Settings.GetSettingsHashCode();
 
 		public void Dispose()
 		{
+			State.OnReset -= State_OnReset;
+			poller.Dispose();
 			reader.Dispose();
 			Settings.Dispose();
 		}

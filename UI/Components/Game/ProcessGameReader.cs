@@ -26,7 +26,9 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		long moduleBase;
 		int moduleSize;
 
-		public GameStatus Status { get; private set; } = GameStatus.Waiting;
+		// Written by the poll thread, read by the UI thread
+		volatile GameStatus status = GameStatus.Waiting;
+		public GameStatus Status => status;
 
 		public void Refresh()
 		{
@@ -37,8 +39,8 @@ namespace LiveSplit.UI.Components.SplitSpammer
 				if (process == null && !Attach())
 					return;
 				// Retry the check until it passes: while the game checks the CD the version int isn't there yet
-				if (Status != GameStatus.Found)
-					Status = GameVersion.IsSupported(moduleSize, TryReadInt) ? GameStatus.Found : GameStatus.Unsupported;
+				if (status != GameStatus.Found)
+					status = GameVersion.IsSupported(moduleSize, TryReadInt) ? GameStatus.Found : GameStatus.Unsupported;
 			}
 			catch (Exception)
 			{
@@ -88,7 +90,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			handle = IntPtr.Zero;
 			process?.Dispose();
 			process = null;
-			Status = GameStatus.Waiting;
+			status = GameStatus.Waiting;
 		}
 
 		public bool TryReadInt(int moduleOffset, out int value)

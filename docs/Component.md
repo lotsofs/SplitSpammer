@@ -2,7 +2,7 @@
 
 Detail for the component rows of [TODO.md](TODO.md).
 
-Dependencies: TST comes first, so each later item is built with tests. ENG needs the game reader (`IGameReader`) and the settings snapshot (`SettingsSnapshot`). ITB is the first real mission and needs ENG. STT and MIS build on ITB. The shared design facts are in the sections where they matter: the threading rules in ENG, the settings semantics in STR, the reading and version check in RDR.
+Dependencies: TST comes first, so each later item is built with tests. ITB is the first real mission; the engine (ENG) is built and waits for it. STT and MIS build on ITB. The shared design facts are in the sections where they matter: the threading rules and the engine's flow in docs/architecture.md.
 
 Everything here is read, not reproduced: the repo has no code yet. Facts about the ASL come from `reference\GTASA.asl` (see `reference\README.md`), read 2026-11-14, and about how a component is built from `D:\Repositories\LiveSplit.OutputToFile`.
 
@@ -12,26 +12,11 @@ There is no test project. OutputToFile drives its component headless through Liv
 
 **Evidence:** read 2026-11-14 in OutputToFile's `Tests\` and docs/testing.md.
 
-**Plan:** `Tests\LiveSplit.SplitSpammer.Tests.csproj`, SDK-style, net481, xunit 2.9.2 with the test SDK and runner, referencing the component project and, copied into its own output, `LiveSplit.Core.dll` and `UpdateManager.dll`. A `TestRun` helper builds a run and a `LiveSplitState`, creates the component with a fake `IGameReader`, plays timer actions through `TimerModel`, and ticks the poll step by hand instead of running its thread. Add tests for `SettingsState` and the settings XML (defaults, effective only with ancestors checked, branch check, uncheck and reset, the snapshot being a copy, the XML round trip with an unknown id, a bad value and an old layout). Add `docs\testing.md` in the style of OutputToFile's.
+**Plan:** `Tests\LiveSplit.SplitSpammer.Tests.csproj`, SDK-style, net481, xunit 2.9.2 with the test SDK and runner, referencing the component project and, copied into its own output, `LiveSplit.Core.dll` and `UpdateManager.dll`. A `TestRun` helper builds a run and a `LiveSplitState`, creates the component with a fake `IGameReader`, plays timer actions through `TimerModel`, and ticks the poll step by hand instead of running its thread. Add tests for `SettingsState` and the settings XML (defaults, effective only with ancestors checked, branch check, uncheck and reset, the snapshot being a copy, the XML round trip with an unknown id, a bad value and an old layout). Add tests for `SplitEngine`, `WatcherSet` and `EnginePoller` with a fake `IGameReader` (two splits at once come one per tick, once per reset, a disabled id remembered after enabling, `Reset()` clearing the queue, each guard, a watcher read once per tick with Old kept, a failed read keeping the value, a throwing check not stopping the others, the poller splitting and resetting and ending on `Dispose()`). Add `docs\testing.md` in the style of OutputToFile's.
 
 **Verify:** `dotnet test` builds and runs a first test that adds the component, ticks it and checks nothing throws.
 
 **Docs when done:** CLAUDE.md (test command), docs/testing.md.
-
-## ENG — Split engine and poll thread
-
-The ASL runs its checks on a script thread at 30 Hz. Its watchers update lazily, at most once per tick, only when a check reads them, and that decides what the Old value of a watcher is. Splits fire once per timer reset, one per tick.
-
-**Evidence:** read 2026-11-14 in `GTASA.asl`: `GetWatcher`, `split`, `TrySplit` and the split queue. The lazy reads are why a watcher read only while a mission is active compares against its last read.
-
-**Plan:**
-- A poll thread at 30 Hz: attach, read, run the engine, and post `TimerModel.Split()` to the UI thread through the captured `SynchronizationContext`.
-- Per tick: lazy watchers like `GetWatcher` (kept exact, because the test fixtures are recorded from the ASL); the guards (nothing splits while the new-game flag and the intro-passed flag are both 0, or while playing time is below 600); once-per-reset ids, where a disabled id is remembered too; one queued split delivered per tick.
-- Threads, as in OutputToFile: LiveSplit's event handlers can run on another thread (its server raises them on a connection thread), so they only count with `Interlocked`; the poll thread acts on the count, for example clearing what already split after a reset. Every poll step is wrapped so an exception is logged and can't reach LiveSplit (a handler that throws on the server's thread closes it). `Update()` stays cheap. `Dispose()` stops the thread and unsubscribes.
-
-**Verify:** tests with a fake reader and a fake clock for one split per tick, once per reset, disabled ids remembered, a reset clearing the done set, the guards, and a failing reader; traces from the real ASL (ITB).
-
-**Docs when done:** CLAUDE.md (thread rules), docs/architecture.md describing the flow.
 
 ## ITB — In the Beginning, the first mission
 
@@ -41,7 +26,7 @@ The first mission slice, with its ASL behaviour. Settings under Splits > Story M
 
 **Plan:** one `Missions/InTheBeginning.cs` that holds the settings and the check together, as the ASL's regions do. Record traces from the real `reference\GTASA.asl` (the local copy; note its SHA-256 beside the fixtures): a scratch recorder (kept in `Tests\Recorder\`) compiles its `startup` and `split` blocks with stubs for settings (all on), a fake `GetWatcher` and the split queue, restricted to this mission's func, and records per tick the five memory values and the id `split` delivers, for a scripted playthrough (menu, loading, cutscene, bike, leaving the area, the Grove Street line, a restart) and two seeded random runs. Commit them in `Tests\Fixtures\` with the ASL commit they came from. A test replays them through the engine and requires the same id on the same tick.
 
-**Verify:** the replay tests; a mutation check that breaking one guard fails them; by hand in LiveSplit: start the timer, play the start of a new game, and see the three splits once each, and again only after a timer reset.
+**Verify:** the replay tests; a mutation check that breaking one guard fails them; by hand in LiveSplit: start the timer, play the start of a new game, and see the three splits once each, and again only after a timer reset. This is also the first live check of the engine, the poll thread and the timer hookup, which cannot be seen before a mission exists. Confirm against the recorded traces that a watcher's first read does not count as Changed (an assumption in `IntWatcher`).
 
 **Docs when done:** README (the settings), CHANGELOG.md Unreleased, docs/testing.md (the recorder).
 

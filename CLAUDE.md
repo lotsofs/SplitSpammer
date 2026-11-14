@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SplitSpammer will be a LiveSplit layout component (.NET Framework 4.8.1 class library, WinForms) that auto splits GTA San Andreas. It reads the game's memory itself, has a settings tree you can collapse and expand, splits through LiveSplit's timer, and is unit-tested without the game. It replaces `GTASA.asl`, which grew too large for one ASL file (ASL has no includes and can't be tested without LiveSplit and the game), and the auto-splitting runtime was ruled out because its settings dialog can't collapse.
 
-**Status: early.** The component loads and does not split yet: a factory, a component that looks for the game, and a settings panel with the game status and the settings tree (so far only its group headers). All planned work is tracked as items, each with its design written down.
+**Status: early.** The component loads and runs the split engine, but no mission exists yet, so it does not split: a factory, a component with a poll thread that reads the game, and a settings panel with the game status and the settings tree (so far only its group headers). All planned work is tracked as items, each with its design written down.
 
 ## Tracked work
 
@@ -35,6 +35,12 @@ deploy.cmd                                             # build the component, th
 ## Adding a setting
 
 Settings are a tree: add a node in `SettingsTree.Build` (`UI\Components\Settings\SettingsTree.cs`) with `tree.Add(id, label, default, tooltip, parentId)`, in the ASL's order, with the ASL's id, label, default and tooltip. The id is also the split id. Read it from logic through the snapshot (`SplitSpammerComponent.Snapshot.IsEnabled(id)`), which is true only when the setting and all its ancestors are checked. The layout stores only settings that differ from their default, so adding one needs no migration; a removed id is ignored when loading.
+
+## Threads
+
+- LiveSplit's timer events can run on another thread, so the handler (`State_OnReset`) only counts with `Interlocked`; the poll thread acts on the count. A handler that throws there closes LiveSplit.
+- The reader, the watchers and the engine belong to the poll thread (`EnginePoller`). The settings control, `TimerModel.Split()` and `Update()` belong to the UI thread; the poll thread posts splits to it through the captured `SynchronizationContext`. The only data crossing is the `volatile` settings snapshot and the reader's `volatile` status.
+- `Update()` runs every frame: keep it cheap. Every poll step is wrapped so an exception is logged, never thrown into LiveSplit. `Dispose()` stops the thread. See [docs/architecture.md](docs/architecture.md).
 
 ## Conventions
 

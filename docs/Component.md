@@ -4,19 +4,19 @@ Detail for the component rows of [TODO.md](TODO.md).
 
 Dependencies: CSP comes first, because everything else needs a project that builds. TST follows, so each later item is built with tests. STR and RDR are independent of each other. ENG needs RDR's reader interface and STR's settings snapshot. ITB is the first real mission and needs ENG. STT and MIS build on ITB. The shared design facts are in the sections where they matter: the threading rules in ENG, the settings semantics in STR, the reading and version check in RDR.
 
-Everything here is read, not reproduced: the repo has no code yet. Facts about the ASL come from `D:\Repositories\livesplit-asl\GTASA.asl`, read 2026-11-14, and about how a component is built from `D:\Repositories\LiveSplit.OutputToFile`.
+Everything here is read, not reproduced: the repo has no code yet. Facts about the ASL come from `reference\GTASA.asl` (see `reference\README.md`), read 2026-11-14, and about how a component is built from `D:\Repositories\LiveSplit.OutputToFile`.
 
-## CSP — Project skeleton that builds and loads in LiveSplit
+## CSP — Check that the component loads in LiveSplit
 
-There are no project files. Copy the pattern of OutputToFile: an old-style csproj at the repo root, `LiveSplit.SplitSpammer.csproj`, targeting v4.8.1 (LiveSplit's own target from 1.8.30; a lower one fails to resolve its DLLs) that lists every source file; `LiveSplit.SplitSpammer.sln`; `Properties/AssemblyInfo.cs`; a factory, `SplitSpammerFactory` (display name "Split Spammer", `ComponentCategory.Control`, the same category LiveSplit's own auto splitters use); an invisible component, `SplitSpammerComponent`, that draws nothing; and `deploy.cmd`, which refuses to run while LiveSplit runs, builds, and copies the DLL into `Components`. The references to `LiveSplit.Core.dll` and `UpdateManager.dll` come from the `LiveSplitDir` property (default `..\..\Programs\Streaming\LiveSplit` from the repo), with `<Private>False</Private>`. The machine has the 4.8.1 targeting pack and MSBuild.
+The skeleton exists: `LiveSplit.SplitSpammer.csproj` and `.sln`, the factory ("Split Spammer", Control category), a component that draws and does nothing, a settings panel that says there is nothing to configure, and `deploy.cmd`. It builds and passes a headless smoke test, but has never been loaded in LiveSplit.
 
-**Evidence:** read 2026-11-14 in OutputToFile's csproj, factory, component and `deploy.cmd`.
+**Evidence:** reproduced 2026-11-14: `dotnet build` with no warnings in Debug and Release, and a scratch program that loads the DLL, creates the factory and component, opens the settings control, round-trips the settings XML and disposes it. Not run inside LiveSplit.
 
-**Plan:** copy OutputToFile's csproj and `deploy.cmd` and change the names; write the factory and a component that implements `IComponent` with empty drawing and the settings members returning nothing yet. Namespace `LiveSplit.UI.Components.SplitSpammer`. No update feed members until REL.
+**Plan:** close LiveSplit, run `deploy.cmd` (it refuses while LiveSplit runs and copies the DLL into `Components`), open LiveSplit, add Split Spammer under Control in the layout editor, open its settings, remove it, and check that LiveSplit shows no errors and still closes cleanly.
 
-**Verify:** `dotnet build` finishes with no warnings in Debug and Release. With LiveSplit closed, `deploy.cmd` copies the DLL, and the component appears under Control in the layout editor and can be added and removed without errors.
+**Verify:** as the plan: the component appears, adds, shows its settings panel and removes without errors.
 
-**Docs when done:** CLAUDE.md (build and deploy commands, the targeting pack, the csproj lists every source file) and README.md.
+**Docs when done:** none beyond logging it in DONE.md.
 
 ## TST — Headless test project
 
@@ -80,7 +80,7 @@ The first mission slice, with its ASL behaviour. Settings under Splits > Story M
 
 **Evidence:** read 2026-11-14 in `GTASA.asl`: the "In the Beginning" region and the guards at the top of `split`.
 
-**Plan:** one `Missions/InTheBeginning.cs` that holds the settings and the check together, as the ASL's regions do. Record traces from the real, committed `GTASA.asl`: a scratch recorder (kept in `Tests\Recorder\`) compiles its `startup` and `split` blocks with stubs for settings (all on), a fake `GetWatcher` and the split queue, restricted to this mission's func, and records per tick the five memory values and the id `split` delivers, for a scripted playthrough (menu, loading, cutscene, bike, leaving the area, the Grove Street line, a restart) and two seeded random runs. Commit them in `Tests\Fixtures\` with the ASL commit they came from. A test replays them through the engine and requires the same id on the same tick.
+**Plan:** one `Missions/InTheBeginning.cs` that holds the settings and the check together, as the ASL's regions do. Record traces from the real `reference\GTASA.asl` (the local copy; note its SHA-256 beside the fixtures): a scratch recorder (kept in `Tests\Recorder\`) compiles its `startup` and `split` blocks with stubs for settings (all on), a fake `GetWatcher` and the split queue, restricted to this mission's func, and records per tick the five memory values and the id `split` delivers, for a scripted playthrough (menu, loading, cutscene, bike, leaving the area, the Grove Street line, a restart) and two seeded random runs. Commit them in `Tests\Fixtures\` with the ASL commit they came from. A test replays them through the engine and requires the same id on the same tick.
 
 **Verify:** the replay tests; a mutation check that breaking one guard fails them; by hand in LiveSplit: start the timer, play the start of a new game, and see the three splits once each, and again only after a timer reset.
 
@@ -100,7 +100,7 @@ The ASL starts the timer on a new game, from the playing-time counter and the in
 
 ## MIS — Port the remaining missions
 
-The rest of the ASL's live missions (Los Santos and Badlands, side missions, collectibles, gang territories, warps, phone calls) and what the ASL itself has not ported yet (the lists in `livesplit-asl\docs\Porting.md`: San Fierro, Desert, Las Venturas, Return to Los Santos, vehicle submissions and so on).
+The rest of the ASL's live missions (Los Santos and Badlands, side missions, collectibles, gang territories, warps, phone calls) and what the ASL itself has not ported yet (the lists in `reference\Porting.md`: San Fierro, Desert, Las Venturas, Return to Los Santos, vehicle submissions and so on).
 
 **Evidence:** read 2026-11-14 in `GTASA.asl` and its docs.
 
@@ -108,4 +108,4 @@ The rest of the ASL's live missions (Los Santos and Badlands, side missions, col
 
 **Verify:** replay tests per mission against the ASL where the ASL has the logic; by hand otherwise.
 
-**Docs when done:** README (settings), CHANGELOG.md Unreleased, and the ASL repo's Porting.md.
+**Docs when done:** README (settings), CHANGELOG.md Unreleased.

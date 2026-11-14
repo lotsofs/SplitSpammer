@@ -10,7 +10,7 @@ Two things bear on the choice. The component will port logic from `GTASA.asl`, w
 
 **Evidence:** read 2026-11-14: OutputToFile's LICENSE is Apache 2.0; GitHub's API reports no license for `tduva/LiveSplit-ASL` or for `lotsofs/livesplit-asl`.
 
-**Plan:** ask Tduva whether the logic ported from their `GTASA.asl` may be reused and under what license, before porting it; until they answer, port only logic that is the fork's own work, or leave the repo unlicensed. Then pick one for this repo, Apache 2.0 or MIT being the usual choices for a LiveSplit component, add the LICENSE file and a README line.
+**Plan:** the reference copy of the script in `reference\` is git-ignored until this is settled. Ask Tduva whether the logic ported from their `GTASA.asl` may be reused and under what license, before porting it; until they answer, port only logic that is the fork's own work, or leave the repo unlicensed. Then pick one for this repo, Apache 2.0 or MIT being the usual choices for a LiveSplit component, add the LICENSE file and a README line.
 
 **Verify:** the LICENSE file exists, GitHub shows the license on the repo page, and the porting items note where logic was derived from.
 

@@ -357,3 +357,6 @@ MigrationBackup/
 # Reference dumps of the GTA SA main script. The leaked source is not ours to publish, so never add them here.
 main.scm.txt
 scm_leak.txt
+
+# Local reference copy of the script, not published: it is a fork of a script with no license (docs/Project.md, item LIC).
+reference/GTASA.asl

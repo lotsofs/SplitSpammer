@@ -2,7 +2,7 @@
 
 Detail for the Los Santos rows of [TODO.md](TODO.md): the live ASL's Los Santos missions after In the Beginning, one item each, in the ASL's order.
 
-Dependencies: every item here needs MHL ([Groundwork.md](Groundwork.md)) and the comparison harness from TST. The order is the suggested one, not required: each mission is its own module. A chain's group node (`LS_Sweet`, `LS_Smoke`, `LS_Ogloc`, `LS_Crash`, `LS_Ryder`, `LS_Cesar`, `LS_Final`) is added to `SettingsTree.Build` by its first port. Gang territories (GTR) and route split skipping (RSK) read the Sweet, C.R.A.S.H. and finale counters, which any of these items may register first.
+Dependencies: every item here needs the comparison harness from TST. The order is the suggested one, not required: each mission is its own module. A chain's group node (`LS_Sweet`, `LS_Smoke`, `LS_Ogloc`, `LS_Crash`, `LS_Ryder`, `LS_Cesar`, `LS_Final`) is added to `SettingsTree.Build` by its first port. Gang territories (GTR) and route split skipping (RSK) read the Sweet, C.R.A.S.H. and finale counters, which any of these items may register first.
 
 How to port, and the facts every item relies on, are in [porting.md](porting.md); each section here says what is particular to its mission. Everything is read, not reproduced: read 2026-11-15 in `reference\GTASA.asl`, region named in each section, with leak names for locals as candidates (porting.md, "Leak names"). The ASL repo's check numbers (VER n) are in `reference\Verify.md`.
 
@@ -14,7 +14,7 @@ Watchers: `$448` (`flag_intro_mission_counter`), `$65` (`funeral_mission_finishe
 
 **Evidence:** read 2026-11-15, region "Big Smoke / Sweet & Kendl".
 
-**Plan:** as porting.md; the check is hand-written, since it has no progress check. The pass split and the house splits run whatever the last started mission is, once the counter is 1, and the pass is not gated by the `bs` setting except through `TrySplit`; keep that. This is the first port, so it is where the engine's thread and marker steps (`RegisterThread`, `RegisterMissionName`, `LastStartedMission`) and MHL are first used in earnest. When checking it in LiveSplit, also fail it once: the trace should show `last started mission ended: intro1`, which has not been seen yet because nothing registers a thread before this port. Its early return while the last started mission is `intro2` now stops when Ryder ends, so check the house splits after a failed Ryder.
+**Plan:** as porting.md; the check is hand-written, since it has no progress check. The pass split and the house splits run whatever the last started mission is, once the counter is 1, and the pass is not gated by the `bs` setting except through `TrySplit`; keep that. This is the first port, so it is where the engine's thread and marker steps (`RegisterThread`, `RegisterMissionName`, `LastStartedMission`) and `StoryMission` are first used in earnest: its settings, ids and registration, plus "Sweet & Kendl" registered by hand. When checking it in LiveSplit, also fail it once: the trace should show `last started mission ended: intro1`, which has not been seen yet because nothing registers a thread before this port. Its early return while the last started mission is `intro2` now stops when Ryder ends, so check the house splits after a failed Ryder.
 
 **Verify:** the comparison passes; in LiveSplit, from a new game: the marker, start, "Sweet & Kendl" text, the three cutscenes, the pass, and entering and leaving the house after it.
 
@@ -98,7 +98,7 @@ Watchers: `$452`, `$6637` (`sw4_stage`), `$6640` to `$6655` (`sw4_hood_dead[0]` 
 
 **Evidence:** read 2026-11-15, region "Drive-By".
 
-**Plan:** as porting.md. The settings loop builds nested group nodes; keep their order.
+**Plan:** as porting.md. The settings loop builds nested group nodes; keep their order. The kill flags are the first array watchers ported. CLAUDE.md's Conventions name an array element with the leak's brackets (`"sw4_hood_dead[3]"`), a rule set with MHL before any mission needed it: check that it reads well in the check's loop (`"sw4_hood_dead[" + i + "]"`), and change the rule here if it doesn't, before the races, properties and phone calls follow it.
 
 **Verify:** the comparison passes; in LiveSplit, the stages and a few kills and a whole group.
 
@@ -266,7 +266,7 @@ Watchers: `$455`, `thread`, candidate `80@` `music5_goals`. Shares `80@` with WS
 
 **Evidence:** read 2026-11-15, region "House Party".
 
-**Plan:** as porting.md; MHL's progress check does not fit, the check is hand-written.
+**Plan:** as porting.md; `StoryMission`'s progress check does not fit, the check is hand-written (`engine.MissionInProgress` with the part's indices may serve for each part's pass).
 
 **Verify:** the comparison passes; in LiveSplit, both parts' start and pass, and the events.
 

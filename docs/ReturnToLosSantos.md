@@ -4,7 +4,7 @@ Detail for the Return to Los Santos rows of [TODO.md](TODO.md): one item per mis
 
 **What these items share** is as for San Fierro ([SanFierro.md](SanFierro.md), the note at the top): built from the ASL's dead mission lists and the SCM dumps, with tests in place of the ASL comparison. Unlike the other later cities, the old script had mid-mission events for three of these (Cut Throat Business, Grove 4 Life, End of the Line part 3), in the dead region `#region Splits OLDDDDD` of `split`, written against `vars.Passed`, which no longer exists; port their logic with the progress check instead. The ASL's group nodes are `RTLS` "Return to Los Santos", with `RTLS_Mansion` "Mansion", `RTLS_Grove` "Grove" and `RTLS_Riot` "Finale". The live ASL already watches the Mansion counter `$626` (`flag_mansion_mission_counter`), for the gang territories (GTR, which uses it to tell Los Santos from Return to Los Santos).
 
-Dependencies: MHL ([Groundwork.md](Groundwork.md)); TST for the tests. The same checks of each index against the SCM apply.
+Dependencies: TST for the tests. The same checks of each index against the SCM apply.
 
 Everything here is read, not reproduced: read 2026-11-15 in `reference\GTASA.asl` (`#region OLD_SHIT`, the dead tail of `init`, the dead regions of `split`) and `reference\main.scm.txt`.
 

@@ -4,7 +4,7 @@ Detail for the Desert rows of [TODO.md](TODO.md): one item per mission, in the o
 
 **What these items share** is as for San Fierro ([SanFierro.md](SanFierro.md), the note at the top): built from the ASL's dead mission lists and the SCM dumps, with tests in place of the ASL comparison. The ASL's group nodes are `Des` "Desert", with `Des_Toreno` "Toreno" and `Des_WangCars` "Wang Cars". The Toreno counter `$593` (`flag_desert_mission_counter`) goes on into the Las Venturas air strip missions (NOE onwards, [LasVenturas.md](LasVenturas.md)). Buying the Wang Cars showroom and the Verdant Meadows airstrip are splits in the old script; they are item WVP in [SideMissions.md](SideMissions.md).
 
-Dependencies: MHL ([Groundwork.md](Groundwork.md)); TST for the tests. The same checks of each index against the SCM apply.
+Dependencies: TST for the tests. The same checks of each index against the SCM apply.
 
 Everything here is read, not reproduced: read 2026-11-15 in `reference\GTASA.asl` (`#region OLD_SHIT`) and `reference\main.scm.txt`.
 

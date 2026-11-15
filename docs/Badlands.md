@@ -2,7 +2,7 @@
 
 Detail for the Badlands rows of [TODO.md](TODO.md): the live ASL's Badlands missions, one item each, in the ASL's order.
 
-Dependencies: as for Los Santos ([LosSantos.md](LosSantos.md)): MHL, and TST's comparison harness. AAO also needs PTW (the wanted level and the melee slot). The group nodes (`BL`, `BL_Intro`, `BL_Catalina`, `BL_Cesar`, `BL_Truth`) are added to `SettingsTree.Build` by the first port under each. The warps (WRP) read the Badlands, King in Exile, Catalina and Truth counters.
+Dependencies: as for Los Santos ([LosSantos.md](LosSantos.md)): TST's comparison harness. AAO also needs PTW (the wanted level and the melee slot). The group nodes (`BL`, `BL_Intro`, `BL_Catalina`, `BL_Cesar`, `BL_Truth`) are added to `SettingsTree.Build` by the first port under each. The warps (WRP) read the Badlands, King in Exile, Catalina and Truth counters.
 
 How to port is in [porting.md](porting.md). Everything is read, not reproduced: read 2026-11-15 in `reference\GTASA.asl`, region named in each section. None of these was recorded working in the ASL repo (its checks VER 7 to VER 16, `reference\Verify.md`).
 

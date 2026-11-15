@@ -127,6 +127,29 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			return true;
 		}
 
+		/// <summary>
+		/// The ASL's ValidateMissionProgress, with its exact reads, for the start of a mission's check. False without reading
+		/// anything when the setting (or an ancestor) is off or the last started mission is not this thread. Otherwise reads
+		/// the chain counter: once it is at or past <paramref name="after"/>, splits <paramref name="passId"/> if it just
+		/// changed from <paramref name="before"/>, and returns false. True only while the mission is active and not passed.
+		/// </summary>
+		/// <param name="chain">The name of the counter's watcher, which the module registers</param>
+		public bool MissionInProgress(string thread, string chain, int before, int after, string passId, string settingId)
+		{
+			if (!settings().IsEnabled(settingId))
+				return false;
+			if (LastStartedMission != thread)
+				return false;
+			IntWatcher counter = Watchers.Get(chain);
+			if (counter.Current >= after)
+			{
+				if (counter.Changed && counter.Old == before)
+					TrySplit(passId);
+				return false;
+			}
+			return true;
+		}
+
 		/// <summary>The timer was reset: every split may happen again.</summary>
 		public void Reset()
 		{

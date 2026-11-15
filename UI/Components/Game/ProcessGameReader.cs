@@ -30,6 +30,8 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		volatile GameStatus status = GameStatus.Waiting;
 		public GameStatus Status => status;
 
+		public long ModuleBase => handle == IntPtr.Zero ? 0 : moduleBase;
+
 		public void Refresh()
 		{
 			try

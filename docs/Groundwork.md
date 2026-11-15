@@ -14,7 +14,7 @@ Every story mission has the same frame in the ASL. `RegisterMissionBasics(abbr, 
 
 **Plan:** a helper that adds the mission's three common settings with the ASL's labels and defaults and returns nothing more, used in `AddSettings`, and one used in `AddChecks` that registers the thread and the mission name (`engine.RegisterThread`, `engine.RegisterMissionName`); an `engine.MissionInProgress(thread, chainWatcher, before, after, passId, settingId)` with `ValidateMissionProgress`'s exact semantics, using `SettingsSnapshot.IsEnabled` for the setting. Decide the common ids, for example `<mission>_markerEntered`, `<mission>_started` and `<mission>_passed`, and write the rule into CLAUDE.md's Conventions. Consider a small table of event checks (a value becoming B, a change from A to B, a switch on the new value) only if it reads the watchers in the same order as the ASL's funcs; a hand-written check stays fine.
 
-**Verify:** tests of the progress check against the ASL's semantics: the setting off reads nothing, another last started mission returns false, the counter reaching the pass index splits the pass once and only from the index before it; ported with Big Smoke or Ryder, whose comparison passes.
+**Verify:** tests of the progress check against the ASL's semantics: the setting off reads nothing, another last started mission returns false, the counter reaching the pass index splits the pass once and only from the index before it, also in the tick the thread ends, and after a fail (the thread gone, the counter unchanged) it reads nothing from the next tick on; ported with Big Smoke or Ryder, whose comparison passes.
 
 **Docs when done:** CLAUDE.md ("Adding a mission", Conventions), porting.md (steps 1 and 3).
 

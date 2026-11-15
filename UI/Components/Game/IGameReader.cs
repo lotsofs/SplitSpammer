@@ -18,6 +18,9 @@ namespace LiveSplit.UI.Components.SplitSpammer
 	{
 		GameStatus Status { get; }
 
+		/// <summary>The absolute address of the main module, to turn the game's own pointers into offsets; 0 when not attached.</summary>
+		long ModuleBase { get; }
+
 		/// <summary>Attaches to the game if it isn't attached, checks the version, and drops a game that has exited.</summary>
 		void Refresh();
 
@@ -35,10 +38,16 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		const int ScmGlobalBase = 0x649960;
 		const int ScmMissionLocalBase = 0x648960;
 
-		/// <summary>The int that points at the first script in the game's active list (CTheScripts::pActiveScripts).</summary>
+		/// <summary>The int that points at the first record in the game's idle list (CTheScripts::pIdleScripts), just before the active one.</summary>
+		public const int IdleScripts = 0x68B428;
+		/// <summary>The int that points at the first script in the game's active list (CTheScripts::pActiveScripts), just before the array.</summary>
 		public const int ActiveScripts = 0x68B42C;
-		/// <summary>Where a script's name is in its record: 8 characters after the two list links.</summary>
+		/// <summary>Where a script's name is in its record: 8 characters after the two list links (next at 0, prev at 4).</summary>
 		public const int ScriptName = 0x8;
+		/// <summary>CTheScripts::ScriptsArray: every script record, running or idle, is one of these.</summary>
+		public const int ScriptsArray = 0x68B430;
+		public const int ScriptRecordSize = 0xE0;
+		public const int ScriptCount = 96;
 		/// <summary>The yellow mission name shown when a mission marker is entered.</summary>
 		public const int MissionStartText = 0x7AAD40;
 		/// <summary>The same for odd jobs (Trucking).</summary>

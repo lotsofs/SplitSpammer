@@ -14,7 +14,7 @@ Watchers: `$448` (`flag_intro_mission_counter`), `$65` (`funeral_mission_finishe
 
 **Evidence:** read 2026-11-15, region "Big Smoke / Sweet & Kendl".
 
-**Plan:** as porting.md; the check is hand-written, since it has no progress check. The pass split and the house splits run whatever the last started mission is, once the counter is 1, and the pass is not gated by the `bs` setting except through `TrySplit`; keep that. This is the first port, so it is where the engine's thread and marker steps (`RegisterThread`, `RegisterMissionName`, `LastStartedMission`) and MHL are first used in earnest.
+**Plan:** as porting.md; the check is hand-written, since it has no progress check. The pass split and the house splits run whatever the last started mission is, once the counter is 1, and the pass is not gated by the `bs` setting except through `TrySplit`; keep that. This is the first port, so it is where the engine's thread and marker steps (`RegisterThread`, `RegisterMissionName`, `LastStartedMission`) and MHL are first used in earnest. When checking it in LiveSplit, also fail it once: the trace should show `last started mission ended: intro1`, which has not been seen yet because nothing registers a thread before this port. Its early return while the last started mission is `intro2` now stops when Ryder ends, so check the house splits after a failed Ryder.
 
 **Verify:** the comparison passes; in LiveSplit, from a new game: the marker, start, "Sweet & Kendl" text, the three cutscenes, the pass, and entering and leaving the house after it.
 

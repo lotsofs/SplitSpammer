@@ -53,11 +53,18 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		/// <summary>The split id handed out by the latest tick that asked for a split.</summary>
 		public string LastSplitId { get; private set; }
 
+		readonly RunningScripts scripts = new RunningScripts();
+
 		/// <summary>
 		/// The registered thread that was last seen starting, as the ASL's vars.lastStartedMission: "" until one starts and
-		/// after a timer reset. A mission ending or failing does not clear it.
+		/// after a timer reset. Unlike the ASL it is also cleared once its thread has left the game's script list (the
+		/// mission was passed or failed, or a save was loaded), at the end of that tick, so the checks still see it in the
+		/// tick the mission ends and split its pass.
 		/// </summary>
 		public string LastStartedMission { get; private set; } = "";
+
+		/// <summary>Whether a script of this name was in the game's script list at this tick's read (the last good one).</summary>
+		public bool IsRunning(string thread) => scripts.Contains(thread);
 
 		/// <param name="nowMs">A clock for the double-split cooldown; the tests pass their own</param>
 		public SplitEngine(IGameReader reader, Func<SettingsSnapshot> settings, Func<long> nowMs = null)
@@ -194,9 +201,13 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 			// Before the checks, which read LastStartedMission. One try for both steps: in the ASL an exception here ends
 			// the split block for the tick, but it would skip the checks too, which is worse.
+			bool scriptsRead = false;
 			try
 			{
 				ThreadStep();
+				// After the thread step, before the checks: a passed mission writes its counter before it ends, so when the
+				// list shows it gone, the checks below already see the counter
+				scriptsRead = scripts.Update(reader);
 				MarkerStep();
 			}
 			catch (Exception ex)
@@ -217,6 +228,13 @@ namespace LiveSplit.UI.Components.SplitSpammer
 					// One broken check mustn't stop the others
 					Log.Error(ex);
 				}
+			}
+
+			// After the checks, so they still saw the mission in the tick it ended. Only on a good read of the list.
+			if (scriptsRead && LastStartedMission != "" && !scripts.Contains(LastStartedMission))
+			{
+				Log.Info("[SplitSpammer] last started mission ended: " + LastStartedMission);
+				LastStartedMission = "";
 			}
 
 			// One split per tick, so splits that happen together reach the timer one after the other

@@ -4,7 +4,7 @@ Detail for the Las Venturas rows of [TODO.md](TODO.md): one item per mission, in
 
 **What these items share** is as for San Fierro ([SanFierro.md](SanFierro.md), the note at the top): built from the ASL's dead mission lists and the SCM dumps, with tests in place of the ASL comparison. The ASL's group nodes are `LV` "Las Venturas", with `LV_AirStrip` "Air Strip", `LV_Casino` "Casino", `LV_Crash` "C.R.A.S.H.", `LV_MaddDogg` "Madd Dogg" and `LV_Heist` "Heist". The air strip missions count on the Toreno counter `$593` shared with the Desert ([Desert.md](Desert.md)).
 
-Dependencies: THR and MHL ([Groundwork.md](Groundwork.md)); TST for the tests. The same checks of each index against the SCM apply; the casino missions in particular are listed in one order in the dead code and in another in the mission table, so check whether they can be passed out of order.
+Dependencies: MHL ([Groundwork.md](Groundwork.md)); TST for the tests. The same checks of each index against the SCM apply; the casino missions in particular are listed in one order in the dead code and in another in the mission table, so check whether they can be passed out of order.
 
 Everything here is read, not reproduced: read 2026-11-15 in `reference\GTASA.asl` (`#region OLD_SHIT`) and `reference\main.scm.txt`.
 

@@ -2,7 +2,7 @@
 
 Detail for the side-mission rows of [TODO.md](TODO.md). The ones the live ASL has come first; the ones only in its dead code follow, in the ASL's node order (`SideMissions` "Side Missions": Courier, Trucking, Quarry, Valet Parking, Vehicle Submissions, Races, Stadium Events, Vehicle Challenges, Schools, Properties, Import/Export, Shooting Range, Gym Moves). That node order is also where each module goes in `Modules.All`, whichever is ported first.
 
-Dependencies: THR ([Groundwork.md](Groundwork.md)) for all of them, and TST's harness. The live ones are ported as [porting.md](porting.md) says. The dead-code ones are built like the later story missions ([SanFierro.md](SanFierro.md), the note at the top): from the old logic in the dead regions of `split` and the dead tail of `init`, written against `vars.Passed`, which no longer exists, and tested with a fake reader instead of compared with the ASL. The ASL repo's porting notes list Burglary among the old Vehicle Submissions, but neither the dead code nor the 2024 script (`git show f7885d5:GTASA.asl` in `D:\Repositories\livesplit-asl`) has it, so it is not an item.
+Dependencies: TST's harness for all of them. The live ones are ported as [porting.md](porting.md) says. The dead-code ones are built like the later story missions ([SanFierro.md](SanFierro.md), the note at the top): from the old logic in the dead regions of `split` and the dead tail of `init`, written against `vars.Passed`, which no longer exists, and tested with a fake reader instead of compared with the ASL. The ASL repo's porting notes list Burglary among the old Vehicle Submissions, but neither the dead code nor the 2024 script (`git show f7885d5:GTASA.asl` in `D:\Repositories\livesplit-asl`) has it, so it is not an item.
 
 Everything here is read, not reproduced: read 2026-11-15 in `reference\GTASA.asl`, region named in each section, with leak names as porting.md describes.
 
@@ -24,7 +24,7 @@ Watchers: `$1992` (`courierLA_passed_once`), `$1994` (`courierSF_passed_once`), 
 
 The ASL's region "Trucking": settings `trucking` (on) with eight missions (on), each with marker, start, leaving the compound, the pass (on) and leaving the truck after passing. Thread `truck` is registered without a split. The check reads the odd-job text and the trucking counter first; the mission number is the counter's Old plus 1; the text changing to "Trucking" splits that number's marker, whatever the last started mission. Then it needs `truck`: the counter rising splits the pass; the stage local (1 start; 3 leaving the truck, for the previous number); the depot flag (1 leaving the compound).
 
-Watchers: `$8159` (`g_nTruckMissionsPassed`), `oddMissionStartText` (THR), candidates `36@` `m_stage`, `106@` `flagOutOfDepot`. Shares `36@` with NAK and `106@` with RTF.
+Watchers: `$8159` (`g_nTruckMissionsPassed`), `oddMissionStartText` (a string watcher the engine already adds), candidates `36@` `m_stage`, `106@` `flagOutOfDepot`. Shares `36@` with NAK and `106@` with RTF.
 
 **Evidence:** read 2026-11-15, region "Trucking" (VER 17). The number comes from the counter's Old, which is 0 on its first read (no split depends on that read alone).
 
@@ -66,7 +66,7 @@ Watchers: `$352` (`race_selection`), `$2300` to `$2326` (`got_race_made_progress
 
 The ASL's region "Chiliad Challenge" under "Vehicle Challenges": settings `VehicleChallenges` (on) holding `mtbiker` (on) with three routes (on), each with "Bicycle mounted", "Countdown start", "Race start (Countdown end)", its checkpoints (route 3 merges 12 and 13, with a tooltip on why), the finish and "Race won" (off). Thread `mtbiker` is registered without a split. The check has no last-started-mission test: it reads the completed flag (once 1 and unchanged it returns; becoming 1 is route 3's finish), the reward money (20000, 30000, 40000 tell the route; a change splits that route's win), the next-race global when the money tells nothing, the total checkpoints (19, 32, 24: the countdown start), `missionStartText` ("The Chiliad Challenge": the route's marker), and the route's checkpoint local (a rise, without a `Changed` test, splits the old checkpoint).
 
-Watchers: `$1801` (`flag_mtbike_passed_1stime`), `$1799` (`mtbikerace_selection`), `missionStartText` (THR), `646@`, `700@`, `747@`, `750@` (the ASL's comments: reward money, total checkpoints, route 3's checkpoint, routes 1 and 2's; the leak's count gives `e`, an array element and two `cpcounter_mtbikerace` elements, so it is off here).
+Watchers: `$1801` (`flag_mtbike_passed_1stime`), `$1799` (`mtbikerace_selection`), `missionStartText` (a string watcher the engine already adds), `646@`, `700@`, `747@`, `750@` (the ASL's comments: reward money, total checkpoints, route 3's checkpoint, routes 1 and 2's; the leak's count gives `e`, an array element and two `cpcounter_mtbikerace` elements, so it is off here).
 
 **Evidence:** read 2026-11-15, region "Chiliad Challenge" (VER 18). It reads mission locals while any mission runs, so another mission's locals can trigger its splits (the total checkpoints becoming 19, say); once-per-reset limits each to one.
 
@@ -96,7 +96,7 @@ Not in the live ASL. The old script had "Wang Cars (Showroom Bought)" and "Verda
 
 **Evidence:** read 2026-11-15 (dead "mission lists" and "Side Missions" settings).
 
-**Plan:** two settings under `PropertiesA` (Assets), split by registering the two threads (THR). Check in the SCM that each thread starts only on buying.
+**Plan:** two settings under `PropertiesA` (Assets), split by registering the two threads (`engine.RegisterThread`). Check in the SCM that each thread starts only on buying.
 
 **Verify:** tests with a fake reader; in LiveSplit, buying each.
 

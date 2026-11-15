@@ -2,7 +2,7 @@
 
 Detail for the collectibles and other rows of [TODO.md](TODO.md): the live ASL's collectibles (`Collectibles`, off) and its `Other` group (off), then the old script's other splits that only its dead code has, and the route split skipping.
 
-Dependencies: THR ([Groundwork.md](Groundwork.md)) for all, TST's harness for the live ones. USJ and WRP also need PTW. PKP needs a signature scan and watchers that can move. GTR reads the Sweet, C.R.A.S.H., finale and Mansion counters and `thread`; WRP reads the Badlands, King in Exile, Catalina and Truth counters. The live ones are ported as [porting.md](porting.md) says; the dead-code ones are built as the note at the top of [SideMissions.md](SideMissions.md) says.
+Dependencies: TST's harness for the live ones. USJ and WRP also need PTW. PKP needs a signature scan and watchers that can move. GTR reads the Sweet, C.R.A.S.H., finale and Mansion counters and `thread`; WRP reads the Badlands, King in Exile, Catalina and Truth counters. The live ones are ported as [porting.md](porting.md) says; the dead-code ones are built as the note at the top of [SideMissions.md](SideMissions.md) says.
 
 The per-slot ones (TAG, PKP, USJ, GTR) read hundreds of watchers a tick while their Specific settings are on; the ASL repo's item BLK (`reference\Defects.md`) planned block reads instead. Port them watcher for watcher first, so the comparison holds, and consider block reads afterwards. They also add hundreds to thousands of settings, so check how the settings panel copes with the tree that size.
 
@@ -122,7 +122,7 @@ Not in the live ASL. The old script had "Plane Flight" (off) under `Other`, with
 
 **Evidence:** read 2026-11-15.
 
-**Plan:** as the note above: register the thread (THR).
+**Plan:** as the note above: register the thread (`engine.RegisterThread`).
 
 **Verify:** tests with a fake reader; in LiveSplit, entering a ticket machine marker.
 
@@ -134,7 +134,7 @@ The ASL registers a root node "Split Skipping" (off), with the route "GI > LS > 
 
 **Evidence:** read 2026-11-15 (`split`, the dead "Non-Linear Split Skipping" settings and the end of `#region Splits OLDDDDD`).
 
-**Plan:** add a skip mode to the engine (a timer action that calls `TimerModel.SkipSplit` on the UI thread in place of `Split`, cleared by a reset), the settings at the root as in the ASL, and the trigger on thread changes (THR) with the chain counters in place of `vars.Passed` (Los Sepulcros passed: Sweet counter 9 or more; Gray Imports: C.R.A.S.H. counter 2 or more; House Party's cutscene: OG Loc counter 4 or more). Port the other routes only if someone asks.
+**Plan:** add a skip mode to the engine (a timer action that calls `TimerModel.SkipSplit` on the UI thread in place of `Split`, cleared by a reset), the settings at the root as in the ASL, and the trigger on thread changes (the `thread` watcher) with the chain counters in place of `vars.Passed` (Los Sepulcros passed: Sweet counter 9 or more; Gray Imports: C.R.A.S.H. counter 2 or more; House Party's cutscene: OG Loc counter 4 or more). Port the other routes only if someone asks.
 
 **Verify:** tests with a fake reader: skipping starts and stops at the right thread changes and turns splits into skips; in LiveSplit, the deviation from the route.
 

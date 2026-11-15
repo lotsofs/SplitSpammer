@@ -95,16 +95,31 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 		public bool TryReadInt(int moduleOffset, out int value)
 		{
-			value = 0;
+			var buffer = new byte[4];
+			if (!TryReadBytes(moduleOffset, buffer))
+			{
+				value = 0;
+				return false;
+			}
+			value = BitConverter.ToInt32(buffer, 0);
+			return true;
+		}
+
+		public bool TryReadBytes(int moduleOffset, byte[] buffer)
+		{
+			if (handle == IntPtr.Zero)
+				return false;
+			return TryReadAbsoluteBytes(moduleBase + moduleOffset, buffer);
+		}
+
+		public bool TryReadAbsoluteBytes(long address, byte[] buffer)
+		{
 			if (handle == IntPtr.Zero)
 				return false;
 			try
 			{
-				var buffer = new byte[4];
-				if (!ReadProcessMemory(handle, new IntPtr(moduleBase + moduleOffset), buffer, new IntPtr(4), out IntPtr read) || read.ToInt64() != 4)
-					return false;
-				value = BitConverter.ToInt32(buffer, 0);
-				return true;
+				return ReadProcessMemory(handle, new IntPtr(address), buffer, new IntPtr(buffer.Length), out IntPtr read)
+					&& read.ToInt64() == buffer.Length;
 			}
 			catch (Exception)
 			{

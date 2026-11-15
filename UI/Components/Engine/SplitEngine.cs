@@ -39,6 +39,10 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		readonly List<Func<bool>> resetChecks = new List<Func<bool>>();
 		readonly HashSet<string> done = new HashSet<string>();
 		readonly Queue<string> queue = new Queue<string>();
+		// The ASL's vars.significantThreads and vars.missionNames: a thread or a marker text, and the split id it splits
+		// (null or empty for none)
+		readonly Dictionary<string, string> threads = new Dictionary<string, string>();
+		readonly Dictionary<string, string> missionNames = new Dictionary<string, string>();
 		long? lastSplitMs;
 
 		public WatcherSet Watchers { get; }
@@ -48,6 +52,12 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 		/// <summary>The split id handed out by the latest tick that asked for a split.</summary>
 		public string LastSplitId { get; private set; }
+
+		/// <summary>
+		/// The registered thread that was last seen starting, as the ASL's vars.lastStartedMission: "" until one starts and
+		/// after a timer reset. A mission ending or failing does not clear it.
+		/// </summary>
+		public string LastStartedMission { get; private set; } = "";
 
 		/// <param name="nowMs">A clock for the double-split cooldown; the tests pass their own</param>
 		public SplitEngine(IGameReader reader, Func<SettingsSnapshot> settings, Func<long> nowMs = null)
@@ -62,7 +72,21 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			Watchers.Add("playingTime", 0x77CB84);
 			Watchers.AddScmGlobal("para_pickup_flag", 1510);
 			Watchers.AddScmGlobal("game_starts_from_scratch", 24);
+			// The ASL's string watchers, read by the thread and marker steps (oddMissionStartText only by Trucking). thread is
+			// the name of the first script in the game's active list, usually the one started last.
+			Watchers.AddString("thread", new MemoryLocation(GameAddresses.ActiveScripts, GameAddresses.ScriptName), 10);
+			Watchers.AddString("missionStartText", new MemoryLocation(GameAddresses.MissionStartText), 32);
+			Watchers.AddString("oddMissionStartText", new MemoryLocation(GameAddresses.OddMissionStartText), 32);
 		}
+
+		/// <summary>
+		/// When this thread starts (other than as the last started mission), it becomes the last started mission and splits
+		/// the id, if there is one. A thread registered twice throws, as the ASL's dictionary does.
+		/// </summary>
+		public void RegisterThread(string thread, string splitId) => threads.Add(thread, splitId);
+
+		/// <summary>When this mission name appears as the marker text, split the id. A name registered twice throws.</summary>
+		public void RegisterMissionName(string text, string splitId) => missionNames.Add(text, splitId);
 
 		/// <summary>
 		/// Adds a split check: it reads watchers and calls TrySplit itself, or returns a split id (or null) for the engine
@@ -102,6 +126,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			done.Clear();
 			queue.Clear();
 			lastSplitMs = null;
+			LastStartedMission = "";
 		}
 
 		/// <summary>
@@ -167,6 +192,18 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			if (playingTime.Current < MinPlayingTime)
 				return false;
 
+			// Before the checks, which read LastStartedMission. One try for both steps: in the ASL an exception here ends
+			// the split block for the tick, but it would skip the checks too, which is worse.
+			try
+			{
+				ThreadStep();
+				MarkerStep();
+			}
+			catch (Exception ex)
+			{
+				Log.Error(ex);
+			}
+
 			foreach (Func<string> check in checks)
 			{
 				try
@@ -188,5 +225,35 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			LastSplitId = queue.Dequeue();
 			return true;
 		}
+
+		// The ASL's "Starting a certain mission": the first script in the active list is probably the one started last
+		void ThreadStep()
+		{
+			StringWatcher thread = Watchers.GetString("thread");
+			if (!thread.Changed)
+				return;
+			// To see on the running game what the names look like (case, padding) before relying on them
+			Log.Info($"[SplitSpammer] thread: {Quote(thread.Old)} -> {Quote(thread.Current)}");
+			if (LastStartedMission == thread.Current || !threads.TryGetValue(thread.Current, out string id))
+				return;
+			if (!string.IsNullOrEmpty(id))
+				TrySplit(id);
+			LastStartedMission = thread.Current;
+		}
+
+		// The ASL's "Marker entry": the yellow text shown when a mission marker is entered
+		void MarkerStep()
+		{
+			StringWatcher text = Watchers.GetString("missionStartText");
+			if (!text.Changed)
+				return;
+			Log.Info($"[SplitSpammer] missionStartText: {Quote(text.Old)} -> {Quote(text.Current)}");
+			if (string.IsNullOrEmpty(text.Current) || !missionNames.TryGetValue(text.Current, out string id))
+				return;
+			if (!string.IsNullOrEmpty(id))
+				TrySplit(id);
+		}
+
+		static string Quote(string text) => text == null ? "null" : "\"" + text + "\"";
 	}
 }

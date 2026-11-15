@@ -11,7 +11,7 @@ The ASL's content is ported one item at a time: one item per mission, side missi
 | Code | Area | Summary | Severity |
 |---|---|---|---|
 | [TST](Component.md#tst--headless-test-project) | Tests | No test project: an xunit project that drives the component headless with a fake game reader and LiveSplit's timer model, and the harness that compares a ported mission with the ASL's logic | High |
-| [GSH](Component.md#gsh--split-at-the-start-of-the-grove-street---home-lines) | Missions | The `intro_groveStreetLinePlayed` split fires when the second "Grove Street - Home" line starts, because `$54` is only set then: make it fire when the first line starts, probably by watching the subtitle text (needs THR's string watcher), and fix its label | Low |
+| [GSH](Component.md#gsh--split-at-the-start-of-the-grove-street---home-lines) | Missions | The `intro_groveStreetLinePlayed` split fires when the second "Grove Street - Home" line starts, because `$54` is only set then: make it fire when the first line starts, probably by watching the subtitle text with a string watcher, and fix its label | Low |
 | [SLD](Component.md#sld--start-and-reset-the-timer-when-loading-a-save) | Timer control | The ASL's "Start/Reset timer when loading save" options are not ported (they never worked in the live script); the recent-update ASL does the start one from the loading byte at `+0x7A67A5`, so both can be added that way, off by default | Low |
 | [LRM](Component.md#lrm--load-removal) | Timer control | No load removal: GTA SA is timed in real time and the ASL has no isLoading block; if a loadless category ever wants it, pause game time through `IsGameTimePaused` and `SetGameTime` | Low |
 
@@ -19,7 +19,6 @@ The ASL's content is ported one item at a time: one item per mission, side missi
 
 | Code | Area | Summary | Severity |
 |---|---|---|---|
-| [THR](Groundwork.md#thr--thread-mission-name-text-and-the-last-started-mission) | Engine | No string or pointer reads: add the `thread`, `missionStartText` and `oddMissionStartText` watchers, the ASL's per-tick thread step (start splits, last started mission) and marker step (mission-name text), and clear the last started mission on reset | High |
 | [MHL](Groundwork.md#mhl--mission-helpers-basic-settings-and-the-progress-check) | Missions | No helpers for the frame every story mission shares: the marker, start and pass settings, the thread and name registration, `ValidateMissionProgress` with its exact reads, and the ids for the three common splits | High |
 | [PTW](Groundwork.md#ptw--pointer-watchers-and-the-other-always-present-watchers) | Engine | No pointer watchers: `pedStatus` and `weaponSlotMelee` (behind `+0x77CD98`) and the stunt-jump records need them, for Against All Odds, the warps and stunt jumps | Medium |
 | [STL](Groundwork.md#stl--stale-old-after-a-gap-kept-from-the-asl) | Engine | Watchers copy the ASL's stale Old on purpose: a watcher read after a gap compares with its last read, possibly a mission ago, and can split on nothing; fix it once the ports are compared, in the engine and the comparison harness alike | Low |

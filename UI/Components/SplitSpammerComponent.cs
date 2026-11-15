@@ -21,7 +21,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		readonly SplitEngine engine;
 		readonly EnginePoller poller;
 		readonly TimerModel timerModel;
-		// The UI thread's context, captured where LiveSplit creates the component, so the poll thread can split on it
+		// The UI thread's context, captured where LiveSplit creates the component, so the poll thread can act on the timer there
 		readonly SynchronizationContext uiContext = SynchronizationContext.Current;
 		// Counts timer resets. The handler runs on any thread (LiveSplit's server raises events on its own), so it only counts.
 		int resets;
@@ -31,7 +31,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		volatile SettingsSnapshot snapshot;
 		public SettingsSnapshot Snapshot => snapshot;
 
-		/// <summary>The engine, for the mission modules to add their watchers and checks to.</summary>
+		/// <summary>The engine, for the modules to add their watchers and checks to.</summary>
 		public SplitEngine Engine => engine;
 
 		public string ComponentName => "Split Spammer";
@@ -58,8 +58,10 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 			timerModel = new TimerModel { CurrentState = state };
 			engine = new SplitEngine(reader, () => snapshot);
+			foreach (IModule module in Modules.All())
+				module.AddChecks(engine);
 			state.OnReset += State_OnReset;
-			poller = new EnginePoller(reader, engine, () => Volatile.Read(ref resets), SplitOnUiThread);
+			poller = new EnginePoller(reader, engine, () => Volatile.Read(ref resets), () => State.CurrentPhase, ActOnUiThread);
 			poller.Start();
 		}
 
@@ -75,13 +77,23 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 		void State_OnReset(object sender, TimerPhase e) => Interlocked.Increment(ref resets);
 
-		// Runs on the poll thread. TimerModel and the timer's events belong to the UI thread.
-		void SplitOnUiThread()
+		// Runs on the poll thread. TimerModel and the timer's events belong to the UI thread, so the actions are posted
+		// there and run in order: reset, start, split.
+		void ActOnUiThread(TimerActions actions)
 		{
+			Action run = () =>
+			{
+				if ((actions & TimerActions.Reset) != 0)
+					timerModel.Reset();
+				if ((actions & TimerActions.Start) != 0)
+					timerModel.Start();
+				if ((actions & TimerActions.Split) != 0)
+					timerModel.Split();
+			};
 			if (uiContext != null)
-				uiContext.Post(_ => timerModel.Split(), null);
+				uiContext.Post(_ => run(), null);
 			else
-				timerModel.Split();
+				run();
 		}
 
 		// Called every frame, on the UI thread. Cheap: the work is on the poll thread. Shows the game's status.

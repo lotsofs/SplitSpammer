@@ -1,3 +1,4 @@
+using LiveSplit.Model;
 using LiveSplit.Options;
 using System;
 using System.Diagnostics;
@@ -17,19 +18,22 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		readonly IGameReader reader;
 		readonly SplitEngine engine;
 		readonly Func<int> resetCount;
-		readonly Action split;
+		readonly Func<TimerPhase> phase;
+		readonly Action<TimerActions> act;
 		readonly Thread thread;
 		volatile bool stop;
 		int seenResets;
 
 		/// <param name="resetCount">Counts the timer resets, raised on any thread; the poller resets the engine when it changes</param>
-		/// <param name="split">Sends one split to the timer. Called on the poll thread, so it has to post to the UI thread itself.</param>
-		public EnginePoller(IGameReader reader, SplitEngine engine, Func<int> resetCount, Action split)
+		/// <param name="phase">The timer's phase. Read on the poll thread; a value a frame old is harmless, every condition is an edge.</param>
+		/// <param name="act">Sends the tick's actions to the timer. Called on the poll thread, so it has to post to the UI thread itself.</param>
+		public EnginePoller(IGameReader reader, SplitEngine engine, Func<int> resetCount, Func<TimerPhase> phase, Action<TimerActions> act)
 		{
 			this.reader = reader;
 			this.engine = engine;
 			this.resetCount = resetCount;
-			this.split = split;
+			this.phase = phase;
+			this.act = act;
 			seenResets = resetCount();
 			thread = new Thread(Run) { IsBackground = true, Name = "SplitSpammer poll" };
 		}
@@ -58,8 +62,9 @@ namespace LiveSplit.UI.Components.SplitSpammer
 						seenResets = resets;
 						engine.Reset();
 					}
-					if (engine.Tick())
-						split();
+					TimerActions actions = engine.Tick(phase());
+					if (actions != TimerActions.None)
+						act(actions);
 				}
 				catch (Exception ex)
 				{

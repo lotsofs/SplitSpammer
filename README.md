@@ -8,4 +8,4 @@ It replaces an ASL auto splitter script that has outgrown a single ASL file.
 
 ## Status
 
-Not usable yet: the component loads in LiveSplit and shows the game's status and a tree of settings (so far only the group headers), but it does not split yet, and there is no release. The planned work is listed in [docs/TODO.md](docs/TODO.md).
+Not usable yet: the component loads in LiveSplit, shows the game's status and a tree of settings, can split on the three events of the first mission, In the Beginning (off by default), and starts and resets the timer when a new game starts. Nothing else splits yet, and there is no release. The planned work is listed in [docs/TODO.md](docs/TODO.md).

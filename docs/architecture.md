@@ -11,7 +11,9 @@ How the component works internally. Code is referred to by member name. Open wor
 | `UI/Components/SplitSpammerSettings.cs` | The settings panel: game status line and the settings tree, and the settings' XML. |
 | `UI/Components/Settings/` | `SettingsTree` (the nodes, built by `Build`), `SettingsState` (checked states, effectiveness), `SettingsSnapshot` (an immutable copy of what is in effect). |
 | `UI/Components/Game/` | `IGameReader`, `GameVersion` (the PC 1.0 check) and `ProcessGameReader` (ReadProcessMemory). |
-| `UI/Components/Engine/` | `WatcherSet` (lazy watchers), `SplitEngine` (guards, checks, once-per-reset, queue) and `EnginePoller` (the thread). |
+| `UI/Components/Modules.cs` | `IModule` and `Modules.All`: the timer control first, then the missions in story order. |
+| `UI/Components/Missions/` | One file per mission with its settings and its check, as the ASL's regions do. |
+| `UI/Components/Engine/` | `WatcherSet` (lazy watchers), `SplitEngine` (the tick: reset, split and start checks, guards, once-per-reset, queue, cooldown), `EnginePoller` (the thread) and `TimerControl` (start and reset on a new game, the Timer settings). |
 | `Preview/` | A stand-alone window that shows the settings panel; run with `deploy -p`. Not part of the component. |
 
 ## Lifecycle
@@ -27,18 +29,33 @@ How the component works internally. Code is referred to by member name. Open wor
 
 1. About once a second, `reader.Refresh()` (attach, version check, detach when the game exited).
 2. If the reset counter changed, `engine.Reset()` clears the set of splits already done and the queue.
-3. `engine.Tick()`: starts a new tick for the watchers; returns false unless the game is Found; the guards (nothing splits while the new-game flag and the intro-passed flag are both 0, or while playing time is below 600; the queue waits); every check in the order it was added, each in try/catch; then one queued split, if any.
-4. If the tick returned true, the poller calls the component's `SplitOnUiThread`, which posts `TimerModel.Split()` to the UI thread. `Split()` ignores any phase but Running.
+3. `engine.Tick(phase)`: starts a new tick for the watchers; returns no action unless the game is Found. While the timer is Running or Paused: the reset checks first, and if one fires the engine clears its done set and queue, asks for Reset and skips the split checks this tick; otherwise the guards (nothing splits while `para_pickup_flag` and `game_starts_from_scratch` are both 0, or while playing time is below 600; the queue waits), every split check in the order it was added, each in try/catch, then one queued split, if any. Then, if the timer is NotRunning, or was just reset: the start checks; true asks for Start. Nothing once the run has Ended. This is the ASL runtime's order, so a reset and the start land in the same tick and the lazy reads match the ASL's.
+4. The poller hands the actions to the component's `ActOnUiThread`, which posts them to the UI thread and runs `TimerModel.Reset()`, `Start()` and `Split()` in that order. The phase comes from `State.CurrentPhase`, read on the poll thread; a value a frame old is harmless, because every condition is an edge and `TimerModel` ignores a Start while running.
+
+Modules plug in through `IModule`: `AddSettings(tree)` is called when `SettingsTree.Build` runs, and `AddChecks(engine)` when the component creates its engine. A split check returns a split id or null; it reads watchers in the ASL's order and returns early as the ASL does, because the early returns decide which watchers are read that tick. `TimerControl` is the first module: it adds the Timer settings and the start and reset checks. A new game is `game_starts_from_scratch` at 0, playing time below 60 s, and playing time leaving 0 or dropping (it is zeroed when New Game is confirmed and counts once loading has ended; the 0 can fall between two ticks). `Changed` is false on a watcher's first read, so attaching to a game already in its first minute starts nothing; a loaded save brings a larger playing time with the intro passed and never matches.
 
 Rules the engine keeps from the ASL:
-- A watcher is read at most once per tick, when a check asks for it. The reads decide what `Old` is, so a watcher that is read only while a mission is active compares against its last read. A failed read keeps the last value.
-- `TrySplit(id)` lets a split through once per timer reset. A split disabled in the settings is remembered as done too. The setting id is the split id, and it counts only when it and all its ancestors are checked (`SettingsSnapshot.IsEnabled`).
+- A watcher is 1, 2 or 4 bytes (`WatcherSet.Add(name, offset, bytes)`), the low bytes of a 4-byte read. A watcher is read at most once per tick, when a check asks for it. The guards read all three of their watchers before testing any, as the ASL does. `IntWatcher` copies the real `MemoryWatcher<int>`: the first read counts as unchanged and leaves Old at 0; a failed read leaves Current alone and sets Old to it. The reads decide what `Old` is, so a watcher that is read only while a mission is active compares against its last read. A failed read keeps the last value.
+- `TrySplit(id)` lets a split through once per timer reset. A split disabled in the settings is remembered as done too, and so is one blocked by the optional cooldown (`timer_doubleSplitPrevention`: no split within 2.5 s of the previous queued one; the ASL's intent, its comparison was inverted). The setting id is the split id, and it counts only when it and all its ancestors are checked (`SettingsSnapshot.IsEnabled`).
 - One split per tick, so splits that happen together reach the timer on consecutive ticks.
 
 ## Threads
 
-- **UI thread:** LiveSplit's calls, the settings panel, `Update()`, `TimerModel.Split()`.
+- **UI thread:** LiveSplit's calls, the settings panel, `Update()`, and `TimerModel`'s `Reset()`, `Start()` and `Split()`.
 - **Poll thread:** the reader, the watchers, the engine. Nothing else touches them.
 - **Any thread:** LiveSplit's timer events (its server raises them on a connection thread). The handler only does `Interlocked.Increment` on the reset counter; a handler that throws there would close LiveSplit.
 - **Between threads:** `SplitSpammerComponent.Snapshot` is a `volatile` reference to an immutable object, replaced whole on each settings change; `ProcessGameReader.Status` is a `volatile` field.
 - Every poll step is caught and logged with `Log.Error`; nothing may throw into LiveSplit.
+
+## Game memory
+
+Module-relative addresses of PC 1.0 (absolute = `+0x400000`). SCM globals are at `+0x649960 + n*4`, mission locals at `+0x648960 + n*4`; their names come from the leaked script (`reference\README.md`).
+
+| Address | Name | What it is |
+|---|---|---|
+| `+0x4245BC`, `+0x42457C` | version check | 38079 in a 1.0 exe (EU and US builds); not there yet while the game checks the CD, hence the module size 18313216 as well |
+| `+0x77CB84` | `playingTime` | the playing-time stat, in ms; 0 at a new game |
+| `+0x77CE50` | money | `CPlayerInfo` money; not used by the component, but a handy marker in logs (350 after the intro cutscenes) |
+| `+0x6B3E1C` | `unknownAB3E1C` | **not identified.** A byte that is 0 from a new game through every intro scene and its natural end, and 1 within a frame of skipping a scripted scene (found by diffing memory across skips on the running game, 2026-11-14: four skips and two unskipped runs). It toggles again later in gameplay (seen while riding the bike), so it is only used while `$5353` is 2 or 3, and once-per-reset makes a later toggle harmless. If it is ever identified, rename it. |
+
+Bytes tried and rejected for the skip, for the record (same day): `+0x76092C` drops to 0 at a skip but also mid-scene when CJ is thrown out of the car and while riding; `+0x7AA472`, `+0x87C6D8`, `+0x87DDA9` mark the end of the cutscene tail, 0.8 s after an early skip and 3 s after a late one; the money comes 0.5 to 2 s after a skip.

@@ -36,7 +36,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 					yield return node;
 		}
 
-		/// <summary>The tree the component ships with. Each mission item adds its own call here.</summary>
+		/// <summary>The tree the component ships with: the ASL header nodes, then each mission module's settings.</summary>
 		public static SettingsTree Build()
 		{
 			var tree = new SettingsTree();
@@ -44,6 +44,8 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			tree.Add("Missions", "Story Missions", true, "Missions with a visible-anywhere minimap marker until completion", "Splits");
 			tree.Add("LS", "Los Santos", true, null, "Missions");
 			tree.Add("LS_Intro", "Intro", true, null, "LS");
+			foreach (IModule module in Modules.All())
+				module.AddSettings(tree);
 			return tree;
 		}
 	}

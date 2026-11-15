@@ -9,9 +9,10 @@ When an item is finished, delete its row here and its section in the detail doc,
 | Code | Area | Summary | Severity |
 |---|---|---|---|
 | [TST](Component.md#tst--headless-test-project) | Tests | No test project: an xunit project that drives the component headless with a fake game reader and LiveSplit's timer model | High |
-| [ITB](Component.md#itb--in-the-beginning-the-first-mission) | Missions | The first mission, In the Beginning, with its settings and checks, tested against traces recorded from the real ASL | Medium |
-| [STT](Component.md#stt--start-reset-save-load-options-and-load-removal) | Timer control | Start and reset the timer, the save-load options and load removal, as in the ASL's start and reset blocks | Medium |
 | [MIS](Component.md#mis--port-the-remaining-missions) | Missions | Port the rest of the ASL's live missions and side content, one file each, in story order | Medium |
+| [GSH](Component.md#gsh--split-at-the-start-of-the-grove-street---home-lines) | Missions | The `intro_groveStreetLinePlayed` split fires when the second "Grove Street - Home" line starts, because `$54` is only set then: make it fire when the first line starts, probably by watching the subtitle text, and fix its label | Low |
+| [SLD](Component.md#sld--start-and-reset-the-timer-when-loading-a-save) | Timer control | The ASL's "Start/Reset timer when loading save" options are not ported (they never worked in the live script); the recent-update ASL does the start one from the loading byte at `+0x7A67A5`, so both can be added that way, off by default | Low |
+| [LRM](Component.md#lrm--load-removal) | Timer control | No load removal: GTA SA is timed in real time and the ASL has no isLoading block; if a loadless category ever wants it, pause game time through `IsGameTimePaused` and `SetGameTime` | Low |
 
 ## Project — [Project.md](Project.md)
 

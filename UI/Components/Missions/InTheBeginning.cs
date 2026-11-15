@@ -3,7 +3,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 	/// <summary>
 	/// The intro mission (INTRO in the game's script), shown as In the Beginning. Not technically part of the intro chain,
 	/// but the ASL puts it there as it fits in narratively. The engine's guards read two of its variables too,
-	/// game_starts_from_scratch and para_pickup_flag, and register them.
+	/// game_starts_from_scratch and para_pickup_flag, and share the watchers with it.
 	/// </summary>
 	public class InTheBeginning : IModule
 	{
@@ -20,6 +20,9 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		public void AddChecks(SplitEngine engine)
 		{
 			WatcherSet w = engine.Watchers;
+			// Shared with the engine's guards and the timer control
+			w.Add("playingTime", 0x77CB84);
+			w.AddScmGlobal("game_starts_from_scratch", 24);
 			// 1 = the cutscene was skipped, 2 = the scripted scene is running, 3 = it finished,
 			// 0 = it ended or was skipped
 			w.AddScmGlobal("cutscene_skip_CUT", 5353);

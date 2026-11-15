@@ -7,7 +7,7 @@ Moved from livesplit-asl on 2026-11-14 when GTA SA auto splitting moved to Split
 | `GTASA.asl` | The ASL auto splitter being ported: a fork of Tduva's script, half rewritten. Git-ignored here, because Tduva's repository has no license (see item LIC in `docs/Project.md`). |
 | `GTASA_orig_recentupdate.asl` | A recent update of Tduva's original script by someone else: multi-version with Steam offsets, and a thread-based timer start. Kept to compare with. Git-ignored like `GTASA.asl` (`reference/*.asl`); never commit it. |
 | `main.scm.txt`, `scm_leak.txt` | Reference dumps of the game's own script. Git-ignored; the leaked source must never be pushed. |
-| `Porting.md` | What the script still lacks, mission by mission, with where its logic is: the input for item MIS. |
+| `Porting.md` | What the script still lacks, by part of the game, with where its logic is. SplitSpammer's own items for these, one per mission, are in `docs/TODO.md`. |
 | `Defects.md`, `Verify.md`, `TODO.md`, `DONE.md`, `CHANGELOG.md` | The script's known defects, unverified checks, old index and log rows, and player-facing history. Worth reading for behaviour not to carry over (for example the inverted double-split cooldown and the save-load options that do nothing). |
 
 The sections below are the script's own guide, from livesplit-asl's CLAUDE.md. The script's header comment links a community spreadsheet of addresses.

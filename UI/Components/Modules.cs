@@ -12,7 +12,10 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		/// <summary>Adds the module's settings. Its parents must already exist.</summary>
 		void AddSettings(SettingsTree tree);
 
-		/// <summary>Adds the module's watchers and checks. A watcher's name must not be used by another module.</summary>
+		/// <summary>
+		/// Adds the module's watchers and checks. Register every watcher the checks read, shared ones too: an address that
+		/// is already watched gives the same watcher.
+		/// </summary>
 		void AddChecks(SplitEngine engine);
 	}
 

@@ -23,6 +23,9 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		public void AddChecks(SplitEngine engine)
 		{
 			WatcherSet w = engine.Watchers;
+			// Shared with the engine's guards
+			w.Add("playingTime", 0x77CB84);
+			w.AddScmGlobal("game_starts_from_scratch", 24);
 			engine.AddStartCheck(() => engine.Settings.IsEnabled("timer_start") && NewGameStarted(w));
 			engine.AddResetCheck(() => engine.Settings.IsEnabled("timer_reset") && NewGameStarted(w));
 		}

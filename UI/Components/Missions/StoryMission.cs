@@ -35,18 +35,18 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		}
 
 		/// <summary>
-		/// First in AddSettings: the mission (on), then "Mission Marker Entered" and "Mission Started" (off) under it. The
+		/// First in AddSettings: the mission (on), then "Mission marker entered" and "Mission started" (off) under it. The
 		/// mission's event settings follow, then <see cref="AddPassedSetting"/>.
 		/// </summary>
 		public void AddBasicSettings(SettingsTree tree)
 		{
 			tree.Add(Id, Label, true, Tooltip, ParentId);
-			tree.Add(MarkerEnteredId, "Mission Marker Entered", false, null, Id);
-			tree.Add(StartedId, "Mission Started", false, null, Id);
+			tree.Add(MarkerEnteredId, "Mission marker entered", false, null, Id);
+			tree.Add(StartedId, "Mission started", false, null, Id);
 		}
 
-		/// <summary>Last in AddSettings, after the events: "Mission Passed" (on).</summary>
-		public void AddPassedSetting(SettingsTree tree) => tree.Add(PassedId, "Mission Passed", true, null, Id);
+		/// <summary>Last in AddSettings, after the events: "Mission passed" (on).</summary>
+		public void AddPassedSetting(SettingsTree tree) => tree.Add(PassedId, "Mission passed", true, null, Id);
 
 		/// <summary>In AddChecks: the thread splits the start and becomes the last started mission; the marker text splits the marker.</summary>
 		public void Register(SplitEngine engine)

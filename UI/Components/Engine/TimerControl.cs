@@ -13,7 +13,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		{
 			tree.Add("timer", "Timer", true);
 			tree.Add("timer_reset", "Reset timer on new game", true,
-				"Start timer when the initial loading screen ends after starting a new game, before the intro cutscene begins.", "timer");
+				"Reset a running timer when the initial loading screen ends after starting a new game, also from the pause menu.", "timer");
 			tree.Add("timer_start", "Start timer on new game", true,
 				"Start timer when the initial loading screen ends after starting a new game, before the intro cutscene begins.", "timer");
 			tree.Add(SplitEngine.DoubleSplitSetting, "Double split prevention (2.5 seconds)", false,

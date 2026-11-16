@@ -114,16 +114,27 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		/// </summary>
 		public bool TrySplit(string id)
 		{
+			// Every call is logged, so the trace shows which splits happen, and why one didn't reach the timer
 			if (!done.Add(id))
+			{
+				DebugOutput.Write("split prevented (already done): " + id);
 				return false;
+			}
 			SettingsSnapshot snapshot = settings();
 			if (!snapshot.IsEnabled(id))
+			{
+				DebugOutput.Write("split prevented (disabled in settings): " + id);
 				return false;
+			}
 			long now = nowMs();
 			if (snapshot.IsEnabled(DoubleSplitSetting) && lastSplitMs.HasValue && now - lastSplitMs.Value < DoubleSplitCooldownMs)
+			{
+				DebugOutput.Write("split prevented (double split prevention): " + id);
 				return false;
+			}
 			lastSplitMs = now;
 			queue.Enqueue(id);
+			DebugOutput.Write("split: " + id);
 			return true;
 		}
 
@@ -256,7 +267,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			// After the checks, so they still saw the mission in the tick it ended. Only on a good read of the list.
 			if (scriptsRead && LastStartedMission != "" && !scripts.Contains(LastStartedMission))
 			{
-				Log.Info("[SplitSpammer] last started mission ended: " + LastStartedMission);
+				DebugOutput.Write("last started mission ended: " + LastStartedMission);
 				LastStartedMission = "";
 			}
 
@@ -274,7 +285,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			if (!thread.Changed)
 				return;
 			// To see on the running game what the names look like (case, padding) before relying on them
-			Log.Info($"[SplitSpammer] thread: {Quote(thread.Old)} -> {Quote(thread.Current)}");
+			DebugOutput.Write($"thread: {Quote(thread.Old)} -> {Quote(thread.Current)}");
 			if (LastStartedMission == thread.Current || !threads.TryGetValue(thread.Current, out string id))
 				return;
 			if (!string.IsNullOrEmpty(id))
@@ -288,7 +299,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			StringWatcher text = Watchers.GetString("missionStartText");
 			if (!text.Changed)
 				return;
-			Log.Info($"[SplitSpammer] missionStartText: {Quote(text.Old)} -> {Quote(text.Current)}");
+			DebugOutput.Write($"missionStartText: {Quote(text.Old)} -> {Quote(text.Current)}");
 			if (string.IsNullOrEmpty(text.Current) || !missionNames.TryGetValue(text.Current, out string id))
 				return;
 			if (!string.IsNullOrEmpty(id))

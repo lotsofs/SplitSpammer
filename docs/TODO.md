@@ -26,7 +26,6 @@ The ASL's content is ported one item at a time: one item per mission, side missi
 
 | Code | Area | Summary | Severity |
 |---|---|---|---|
-| [BSM](LosSantos.md#bsm--big-smoke) | Intro | Port Big Smoke (`intro1`): marker, start, the "Sweet & Kendl" text, three cutscenes, pass, and entering and leaving CJ's house after it; a hand-written check without the progress check | Medium |
 | [RYD](LosSantos.md#ryd--ryder) | Intro | Port Ryder (`intro2`): fail and restart, the barbershop and pizza stops, the return to Ryder's house; check what `$169` and `$1514` really are | Medium |
 | [TUT](LosSantos.md#tut--tagging-up-turf) | Sweet | Port Tagging up Turf (`sweet1`): seven events from dialogue and help locals, with a failsafe for a restarted mission; the ASL repo's example of the stale-Old false split | Medium |
 | [CTH](LosSantos.md#cth--cleaning-the-hood) | Sweet | Port Cleaning the Hood (`sweet1b`): B Dup, the dealer, the crack den and the return, from the act, dialogue and dialogue-length locals | Medium |
@@ -53,6 +52,7 @@ The ASL's content is ported one item at a time: one item per mission, side missi
 | [HSL](LosSantos.md#hsl--high-stakes-low-rider) | Cesar | Port High Stakes, Low-Rider (`cesar1`): the intro and race start, with the pass and race start read whatever the last started mission | Medium |
 | [RTF](LosSantos.md#rtf--reuniting-the-families) | Finale | Port Reuniting the Families (`drugs4`): the motel, the corridors by audio line, Sweet, the helicopter and the chase | Medium |
 | [TGS](LosSantos.md#tgs--the-green-sabre) | Finale | Port The Green Sabre (`la1fin2`): seven chapter events, from a rise without a change test | Medium |
+| [CJH](LosSantos.md#cjh--entering-cjs-house-only-in-cjs-house) | Intro | Big Smoke's "Entering CJ's house" split fires on entering any interior the game numbers 3 while `$65` is 0 or 1; add the game's own test, CJ's position near the save point, once PTW gives pointer reads | Low |
 
 ## Badlands story — [Badlands.md](Badlands.md)
 

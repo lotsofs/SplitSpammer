@@ -41,7 +41,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		{
 			var tree = new SettingsTree();
 			tree.Add("Splits", "Splits", true);
-			tree.Add("Missions", "Story Missions", true, "Missions with a visible-anywhere minimap marker until completion", "Splits");
+			tree.Add("Missions", "Story missions", true, "Missions with a visible-anywhere minimap marker until completion", "Splits");
 			tree.Add("LS", "Los Santos", true, null, "Missions");
 			tree.Add("LS_Intro", "Intro", true, null, "LS");
 			foreach (IModule module in Modules.All())

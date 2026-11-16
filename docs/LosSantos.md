@@ -6,20 +6,6 @@ Dependencies: every item here needs the comparison harness from TST. The order i
 
 How to port, and the facts every item relies on, are in [porting.md](porting.md); each section here says what is particular to its mission. Everything is read, not reproduced: read 2026-11-15 in `reference\GTASA.asl`, region named in each section, with leak names for locals as candidates (porting.md, "Leak names"). The ASL repo's check numbers (VER n) are in `reference\Verify.md`.
 
-## BSM — Big Smoke
-
-The ASL's region "Big Smoke / Sweet & Kendl" in the Intro chain: thread `intro1`, settings `bs` (on) with the marker and start splits, a second mission name ("Sweet & Kendl", shown when the mission text changes), three cutscene events from the dialogue block, the pass, and two events after the pass (entering and leaving CJ's house). It does not use `ValidateMissionProgress`: it returns while the last started mission is `intro2`; reads the intro counter; at 2 returns; at 1 splits the pass on the change and then checks the house help and the interior on every tick; otherwise it needs the last started mission to be `intro1` and reads the dialogue block.
-
-Watchers: `$448` (`flag_intro_mission_counter`), `$65` (`funeral_mission_finished`; the ASL calls it the house help: 1 "go inside the house", 2 after the save help, 3 after "go and see Ryder"), `$43` (`main_visible_area`, 3 inside CJ's house), `46@` (candidate `intro1_chat_switch`; shared with TUT).
-
-**Evidence:** read 2026-11-15, region "Big Smoke / Sweet & Kendl".
-
-**Plan:** as porting.md; the check is hand-written, since it has no progress check. The pass split and the house splits run whatever the last started mission is, once the counter is 1, and the pass is not gated by the `bs` setting except through `TrySplit`; keep that. This is the first port, so it is where the engine's thread and marker steps (`RegisterThread`, `RegisterMissionName`, `LastStartedMission`) and `StoryMission` are first used in earnest: its settings, ids and registration, plus "Sweet & Kendl" registered by hand. When checking it in LiveSplit, also fail it once: the trace should show `last started mission ended: intro1`, which has not been seen yet because nothing registers a thread before this port. Its early return while the last started mission is `intro2` now stops when Ryder ends, so check the house splits after a failed Ryder.
-
-**Verify:** the comparison passes; in LiveSplit, from a new game: the marker, start, "Sweet & Kendl" text, the three cutscenes, the pass, and entering and leaving the house after it.
-
-**Docs when done:** as porting.md, step 7: the changelog's In the Beginning entry becomes the Los Santos story entry.
-
 ## RYD — Ryder
 
 The ASL's region "Ryder": thread `intro2`, intro counter 1 to 2 through `ValidateMissionProgress`, settings `r` (on) with marker, start, failing the mission, restarting it after failing, the barbershop (enter, haircut bought, leave), the pizza restaurant (enter, pizza bought, leave), arriving back at Ryder's house, and the pass. The check reads the fail flag first, then `thread` (restart: thread changed to `intro2` while the fail flag is 1 and the on-mission flag is 0), returns while the on-mission flag is 0, then the haircut flag, the interior (2 barbershop, 5 pizza), and the dialogue block for the exits and the purchases.
@@ -28,7 +14,7 @@ Watchers: `$448`, `$169` (`flag_player_on_menace_mission`, which the ASL reads a
 
 **Evidence:** read 2026-11-15, region "Ryder". The leak names of `$169` and `$1514` do not say what the ASL uses them for; check both live.
 
-**Plan:** as porting.md.
+**Plan:** as porting.md. Registering `intro2` turns on Big Smoke's early return (its check returns while Ryder is the last started mission): replace the `RyderThread` constant in `BigSmoke.cs` with Ryder's `StoryMission` thread, and run the comparison with Big Smoke's func on both sides too, since both read `$43` and `$448`.
 
 **Verify:** the comparison passes; in LiveSplit: each event, including failing (blowing up Ryder's car) and restarting.
 
@@ -38,7 +24,7 @@ Watchers: `$448`, `$169` (`flag_player_on_menace_mission`, which the ASL reads a
 
 The ASL's region "Tagging up Turf": thread `sweet1`, Sweet counter 0 to 1, settings `tut` (on, with the tooltip naming the tags involved) with marker, start, events (intro end, Sweet's tag cutscene end, entering the car after the first group of tags, leaving it before the second, approaching the gang members, entering the car after the second group, the ending cutscene) and the pass. After the progress check it reads the dialogue block (0 to 4 intro end, 4 to 6 final cutscene), returns while that block is 0 (a failsafe for a restarted mission), then the help flags in the ASL's order.
 
-Watchers: `$452` (`flag_sweet_mission_counter`), and the candidates `40@` `played_mission_audio_sweet1`, `46@` `gang_hassle`, `48@` `sweet1_cell_index_end`, `58@` `help_for_tagging`, `65@` `played_last_line_of_audio` (`48@` and `58@` confirmed in `reference\README.md`). Shares `40@` with RYD, `46@` with BSM, `48@` with NAK.
+Watchers: `$452` (`flag_sweet_mission_counter`), and the candidates `40@` `played_mission_audio_sweet1`, `46@` `gang_hassle`, `48@` `sweet1_cell_index_end`, `58@` `help_for_tagging`, `65@` `played_last_line_of_audio` (`48@` and `58@` confirmed in `reference\README.md`). Shares `40@` with RYD, `46@` with Big Smoke (`intro1_chat_switch`, ported), `48@` with NAK.
 
 **Evidence:** read 2026-11-15, region "Tagging up Turf". It is the ASL repo's example for STL (`58@` going stale).
 
@@ -383,3 +369,15 @@ Watchers: `$458`, candidate `100@` `lf2_flag`.
 **Verify:** the comparison passes; in LiveSplit, each event.
 
 **Docs when done:** as porting.md, step 7.
+
+## CJH — "Entering CJ's house" only in CJ's house
+
+Big Smoke's `intro1_houseEntered` copies the ASL: it splits when `$43` (`main_visible_area`) becomes 3 while `$65` (`funeral_mission_finished`) is 0 or 1, after the pass and before Ryder. The game numbers more interiors than CJ's house 3, so entering another of them in that window splits it too. The game's own test (the intro's ambient script `INTROST`, before the save help) is the interior being 3 and CJ within 10 × 10 × 5 m of the save point at (2496.05, −1698.01, 1013.75).
+
+**Evidence:** read 2026-11-16 in `reference\main.scm.txt` (`INTROST`, the `$HELP_GROOVE_SHOWN == 1` block) and the leak's `intro_stuff_loop`. Which other interiors are 3 is not checked.
+
+**Plan:** after PTW, watch CJ's position through the player pointer the ASL already uses for `pedStatus`: `[+0x77CD98]` is the player ped, its matrix pointer is at `+0x14` and the position at `+0x30` (x, y, z floats). In the house test, also require CJ inside a box around the house's interior (near x 2496, y −1696, z above 1000). Check whether the position is already inside on the tick the interior number changes; if not, test it on the following ticks while the interior is 3 and the split hasn't fired. The ASL comparison then leaves this id out (porting.md, step 4).
+
+**Verify:** in LiveSplit, after Big Smoke: entering another interior numbered 3 first splits nothing, and entering CJ's house still splits at the door.
+
+**Docs when done:** the item's log row; the changelog's Big Smoke entry only if its wording changes.

@@ -2,7 +2,7 @@
 
 Detail for the groundwork rows of [TODO.md](TODO.md): what the engine needs before the missions can be ported the way [porting.md](porting.md) describes.
 
-Dependencies: TST (in [Component.md](Component.md)) gives the comparison harness every port uses. PTW reuses the reader's pointer reads (`MemoryLocation`). Big Smoke (BSM) is the first port that needs them. STL waits until the ports have been compared with the ASL.
+Dependencies: TST (in [Component.md](Component.md)) gives the comparison harness every port uses. PTW reuses the reader's pointer reads (`MemoryLocation`); CJH (in [LosSantos.md](LosSantos.md)) needs PTW. STL waits until the ports have been compared with the ASL.
 
 Everything here is read, not reproduced: read 2026-11-15 in `reference\GTASA.asl` (`startup`, `init`, `split`) and in the component's `Engine\` and `Game\` folders.
 

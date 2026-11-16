@@ -84,13 +84,13 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		{
 			if (!hasValue)
 			{
-				Log.Info("[SplitSpammer] scripts running: " + string.Join(" ", found.OrderBy(n => n, StringComparer.Ordinal)));
+				DebugOutput.Write("scripts running: " + string.Join(" ", found.OrderBy(n => n, StringComparer.Ordinal)));
 				return;
 			}
 			string[] started = found.Where(n => !names.Contains(n)).ToArray();
 			string[] ended = names.Where(n => !found.Contains(n)).ToArray();
 			if (started.Length + ended.Length > 0)
-				Log.Info("[SplitSpammer] scripts:" + string.Concat(started.Select(n => " +" + n)) + string.Concat(ended.Select(n => " -" + n)));
+				DebugOutput.Write("scripts:" + string.Concat(started.Select(n => " +" + n)) + string.Concat(ended.Select(n => " -" + n)));
 		}
 	}
 }

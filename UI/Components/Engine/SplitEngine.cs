@@ -66,6 +66,12 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		/// <summary>Whether a script of this name was in the game's script list at this tick's read (the last good one).</summary>
 		public bool IsRunning(string thread) => scripts.Contains(thread);
 
+		/// <summary>
+		/// Whether the id was tried since the last reset, split or blocked (TrySplit counts both as done): for a check that
+		/// splits only after another event of this run, whatever that event's setting.
+		/// </summary>
+		public bool IsDone(string id) => done.Contains(id);
+
 		/// <param name="nowMs">A clock for the double-split cooldown; the tests pass their own</param>
 		public SplitEngine(IGameReader reader, Func<SettingsSnapshot> settings, Func<long> nowMs = null)
 		{

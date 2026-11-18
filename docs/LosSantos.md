@@ -6,25 +6,11 @@ Dependencies: every item here needs the comparison harness from TST. The order i
 
 How to port, and the facts every item relies on, are in [porting.md](porting.md); each section here says what is particular to its mission. Everything is read, not reproduced: read 2026-11-15 in `reference\GTASA.asl`, region named in each section, with leak names for locals as candidates (porting.md, "Leak names"). The ASL repo's check numbers (VER n) are in `reference\Verify.md`.
 
-## RYD — Ryder
-
-The ASL's region "Ryder": thread `intro2`, intro counter 1 to 2 through `ValidateMissionProgress`, settings `r` (on) with marker, start, failing the mission, restarting it after failing, the barbershop (enter, haircut bought, leave), the pizza restaurant (enter, pizza bought, leave), arriving back at Ryder's house, and the pass. The check reads the fail flag first, then `thread` (restart: thread changed to `intro2` while the fail flag is 1 and the on-mission flag is 0), returns while the on-mission flag is 0, then the haircut flag, the interior (2 barbershop, 5 pizza), and the dialogue block for the exits and the purchases.
-
-Watchers: `$448`, `$169` (`flag_player_on_menace_mission`, which the ASL reads as "past the intro cutscene"), `$676` (`flag_changed_hair_intro2`), `$1514` (`can_skip_smoking_cutscene`; the ASL reads it becoming 1 as the fail), `$43`, `thread`, `40@` (candidate `intro2_chat_switch`; shared with TUT).
-
-**Evidence:** read 2026-11-15, region "Ryder". The leak names of `$169` and `$1514` do not say what the ASL uses them for; check both live.
-
-**Plan:** as porting.md. Registering `intro2` turns on Big Smoke's early return (its check returns while Ryder is the last started mission): replace the `RyderThread` constant in `BigSmoke.cs` with Ryder's `StoryMission` thread, and run the comparison with Big Smoke's func on both sides too, since both read `$43` and `$448`.
-
-**Verify:** the comparison passes; in LiveSplit: each event, including failing (blowing up Ryder's car) and restarting.
-
-**Docs when done:** as porting.md, step 7.
-
 ## TUT — Tagging up Turf
 
 The ASL's region "Tagging up Turf": thread `sweet1`, Sweet counter 0 to 1, settings `tut` (on, with the tooltip naming the tags involved) with marker, start, events (intro end, Sweet's tag cutscene end, entering the car after the first group of tags, leaving it before the second, approaching the gang members, entering the car after the second group, the ending cutscene) and the pass. After the progress check it reads the dialogue block (0 to 4 intro end, 4 to 6 final cutscene), returns while that block is 0 (a failsafe for a restarted mission), then the help flags in the ASL's order.
 
-Watchers: `$452` (`flag_sweet_mission_counter`), and the candidates `40@` `played_mission_audio_sweet1`, `46@` `gang_hassle`, `48@` `sweet1_cell_index_end`, `58@` `help_for_tagging`, `65@` `played_last_line_of_audio` (`48@` and `58@` confirmed in `reference\README.md`). Shares `40@` with RYD, `46@` with Big Smoke (`intro1_chat_switch`, ported), `48@` with NAK.
+Watchers: `$452` (`flag_sweet_mission_counter`), and the candidates `40@` `played_mission_audio_sweet1`, `46@` `gang_hassle`, `48@` `sweet1_cell_index_end`, `58@` `help_for_tagging`, `65@` `played_last_line_of_audio` (`48@` and `58@` confirmed in `reference\README.md`). Shares `40@` with Ryder (`intro2_chat_switch`, ported), `46@` with Big Smoke (`intro1_chat_switch`, ported), `48@` with NAK.
 
 **Evidence:** read 2026-11-15, region "Tagging up Turf". It is the ASL repo's example for STL (`58@` going stale).
 
@@ -369,6 +355,18 @@ Watchers: `$458`, candidate `100@` `lf2_flag`.
 **Verify:** the comparison passes; in LiveSplit, each event.
 
 **Docs when done:** as porting.md, step 7.
+
+## RFS — Ryder's fail in a save where it was failed before
+
+Ryder's `intro2_failed` splits when `$1514` (`can_skip_smoking_cutscene`) goes from 0 to 1, as the ASL's does. The mission's failed handler sets it to 1 and only the game's start sets it back to 0, so it is saved as 1. In a save in which Ryder was failed before, failing it again changes nothing, so the fail doesn't split, and neither do `intro2_markerEnteredAfterFail` and `intro2_restarted`, which need the fail split done in this run. A run from a new game is not affected.
+
+**Evidence:** read 2026-11-18 in `reference\main.scm.txt` (`$1514 = 0` once at the start of the game, `$1514 = 1` in Ryder's failed handler); not reproduced.
+
+**Plan:** also count as a fail the tick Ryder's thread leaves the script list with the intro counter still 1 while the on-mission flag `$169` was 1, or while `$1514` was already 1 when the mission started. A save loaded during Ryder also ends the thread: decide whether that should split the fail, and check what the counter and `$169` read in that tick.
+
+**Verify:** a comparison scenario for each case (a save with the flag set, a fail early and late, a pass, a save loaded during the mission), and in LiveSplit: fail Ryder in a save in which it was failed before.
+
+**Docs when done:** the comments in `Ryder.cs`; CHANGELOG.md Unreleased, the Ryder entry, if users of a release could have met it.
 
 ## CJH — "Entering CJ's house" only in CJ's house
 

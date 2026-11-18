@@ -27,6 +27,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			yield return new TimerControl();
 			yield return new InTheBeginning();
 			yield return new BigSmoke();
+			yield return new Ryder();
 		}
 	}
 }

@@ -10,9 +10,6 @@ namespace LiveSplit.UI.Components.SplitSpammer
 	{
 		static readonly StoryMission Mission = new StoryMission("intro1", "Big Smoke", "intro1", "LS_Intro");
 
-		// Ryder's thread. Nothing registers it until Ryder is ported, so the early return below does nothing yet; Ryder's
-		// port replaces this with its StoryMission's Thread.
-		const string RyderThread = "intro2";
 		// The intro chain's marker script, MS_INTRO_MISSIONS: it starts Big Smoke and Ryder from their markers. Big Smoke's
 		// pass ends it, and the intro's ambient script starts it again as Ryder's marker appears. Lower case in memory, and
 		// gone at the pass and back with the marker, as read (seen on the running game, 2026-11-16).
@@ -47,7 +44,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 				"When CJ can move again after the camera shows the save point and the save help", Mission.Id);
 			tree.Add(intro1_houseLeft, "Leaving CJ's house after passing", false, null, Mission.Id);
 			// Not in the ASL
-			tree.Add(intro1_ryderMarkerShown, "\"Go and see Ryder\" shown (Ryder's marker appears)", false,
+			tree.Add(intro1_ryderMarkerShown, "Left CJ's house after passing", false,
 				"Immediately upon appearing outside CJ's house after exiting", Mission.Id);
 		}
 
@@ -85,7 +82,8 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			// The ASL's order of reads and early returns
 			engine.AddCheck(() =>
 			{
-				if (engine.LastStartedMission == RyderThread)
+				// While Ryder runs. The engine clears it once Ryder has ended, unlike the ASL, so this reads on after that (below)
+				if (engine.LastStartedMission == Ryder.Mission.Thread)
 					return null;
 				IntWatcher counter = w.Get("flag_intro_mission_counter");
 				if (counter.Current == 2)

@@ -22,7 +22,7 @@ The ASL's `init` always adds `wantedLevel` (`+0x7AA420`, 4 bytes), `pedStatus` (
 
 `IntWatcher` copies LiveSplit's `MemoryWatcher<int>` on purpose, so the ports compare equal with the ASL, and that includes the ASL's defect STL (`reference\Defects.md`): a watcher read only while a condition holds compares its first read after a gap with its last read, possibly a mission or a save ago, and an `Old == X && Current == Y` check can split on a change that never happened in one frame. The ASL repo's example is Tagging up Turf's `58@` after leaving and re-entering the mission. Once-per-reset limits each false split to one.
 
-**Evidence:** read 2026-11-13 in the ASL repo, not reproduced; the component's `IntWatcher` has the same behaviour by design (docs/architecture.md).
+**Evidence:** read 2026-11-13 in the ASL repo, not reproduced; the component's `IntWatcher` has the same behaviour by design (docs/architecture.md). Ryder's fail flag was fixed on its own in its port, by not counting its change in the tick Ryder starts, because a loaded save made the ASL split the fail as Ryder started (`Ryder.cs`).
 
 **Plan:** after the ports have been compared, keep the previous tick's read set as well, and when a watcher was not read in the previous tick, read it twice on its first read, so that Changed is false after a gap. Apply the same change to the ASL side of the comparison harness, so the comparisons keep passing. Decide then whether any check relies on the stale value (none is known).
 

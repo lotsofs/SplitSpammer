@@ -2,7 +2,7 @@
 
 Detail for the groundwork rows of [TODO.md](TODO.md): what the engine needs before the missions can be ported the way [porting.md](porting.md) describes.
 
-Dependencies: TST (in [Component.md](Component.md)) gives the comparison harness every port uses. PTW reuses the reader's pointer reads (`MemoryLocation`); CJH (in [LosSantos.md](LosSantos.md)) needs PTW. STL waits until the ports have been compared with the ASL.
+Dependencies: TST (in [Component.md](Component.md)) gives the comparison harness every port uses. PTW reuses the reader's pointer reads (`MemoryLocation`); CJH (in [LosSantos.md](LosSantos.md)) needs PTW.
 
 Everything here is read, not reproduced: read 2026-11-15 in `reference\GTASA.asl` (`startup`, `init`, `split`) and in the component's `Engine\` and `Game\` folders.
 
@@ -17,15 +17,3 @@ The ASL's `init` always adds `wantedLevel` (`+0x7AA420`, 4 bytes), `pedStatus` (
 **Verify:** tests with a fake reader that changes the pointer; on the running game, log `pedStatus` while getting busted (63) and wasted (55), and `weaponSlotMelee` after picking up the chainsaw (9).
 
 **Docs when done:** docs/architecture.md (game memory table).
-
-## STL — Stale Old after a gap, kept from the ASL
-
-`IntWatcher` copies LiveSplit's `MemoryWatcher<int>` on purpose, so the ports compare equal with the ASL, and that includes the ASL's defect STL (`reference\Defects.md`): a watcher read only while a condition holds compares its first read after a gap with its last read, possibly a mission or a save ago, and an `Old == X && Current == Y` check can split on a change that never happened in one frame. The ASL repo's example is Tagging up Turf's `58@` after leaving and re-entering the mission. Once-per-reset limits each false split to one.
-
-**Evidence:** read 2026-11-13 in the ASL repo, not reproduced; the component's `IntWatcher` has the same behaviour by design (docs/architecture.md). Ryder's fail flag was fixed on its own in its port, by not counting its change in the tick Ryder starts, because a loaded save made the ASL split the fail as Ryder started (`Ryder.cs`).
-
-**Plan:** after the ports have been compared, keep the previous tick's read set as well, and when a watcher was not read in the previous tick, read it twice on its first read, so that Changed is false after a gap. Apply the same change to the ASL side of the comparison harness, so the comparisons keep passing. Decide then whether any check relies on the stale value (none is known).
-
-**Verify:** a test of the Tagging up Turf scenario: no split on returning to the mission, and the split still comes when the car is entered after the third tag; the comparisons still pass with the harness changed the same way.
-
-**Docs when done:** docs/architecture.md (the watcher rules), porting.md (step 3 and "ASL behaviour the engine keeps"), CHANGELOG.md Unreleased (Fixed) if a released split behaved wrongly.

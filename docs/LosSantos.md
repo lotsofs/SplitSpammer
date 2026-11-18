@@ -12,11 +12,11 @@ The ASL's region "Tagging up Turf": thread `sweet1`, Sweet counter 0 to 1, setti
 
 Watchers: `$452` (`flag_sweet_mission_counter`), and the candidates `40@` `played_mission_audio_sweet1`, `46@` `gang_hassle`, `48@` `sweet1_cell_index_end`, `58@` `help_for_tagging`, `65@` `played_last_line_of_audio` (`48@` and `58@` confirmed in `reference\README.md`). Shares `40@` with Ryder (`intro2_chat_switch`, ported), `46@` with Big Smoke (`intro1_chat_switch`, ported), `48@` with NAK.
 
-**Evidence:** read 2026-11-15, region "Tagging up Turf". It is the ASL repo's example for STL (`58@` going stale).
+**Evidence:** read 2026-11-15, region "Tagging up Turf". It is the ASL repo's example for its defect STL (`58@` going stale after leaving and re-entering the mission), which the engine fixes (a read after a gap across a new context counts as unchanged).
 
 **Plan:** as porting.md. Adds the `LS_Sweet` node.
 
-**Verify:** the comparison passes; in LiveSplit, each event, and the STL scenario noted as a known false split until STL is done.
+**Verify:** the comparison passes; in LiveSplit, each event, and the STL scenario: no split on returning to the mission, and the split still comes when the car is entered after the third tag.
 
 **Docs when done:** as porting.md, step 7.
 

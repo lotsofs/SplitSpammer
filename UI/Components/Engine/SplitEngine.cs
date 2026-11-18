@@ -174,6 +174,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			queue.Clear();
 			lastSplitMs = null;
 			LastStartedMission = "";
+			Watchers.NewContext();
 		}
 
 		/// <summary>
@@ -184,7 +185,11 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		{
 			Watchers.NewTick();
 			if (reader.Status != GameStatus.Found)
+			{
+				// What is read next comes from another game, or from one that went on without us
+				Watchers.NewContext();
 				return TimerActions.None;
+			}
 
 			TimerActions actions = TimerActions.None;
 			if (phase == TimerPhase.Running || phase == TimerPhase.Paused)
@@ -275,6 +280,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			{
 				DebugOutput.Write("last started mission ended: " + LastStartedMission);
 				LastStartedMission = "";
+				Watchers.NewContext();
 			}
 
 			// One split per tick, so splits that happen together reach the timer one after the other
@@ -297,6 +303,7 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			if (!string.IsNullOrEmpty(id))
 				TrySplit(id);
 			LastStartedMission = thread.Current;
+			Watchers.NewContext();
 		}
 
 		// The ASL's "Marker entry": the yellow text shown when a mission marker is entered

@@ -20,7 +20,6 @@ The ASL's content is ported one item at a time: one item per mission, side missi
 | Code | Area | Summary | Severity |
 |---|---|---|---|
 | [PTW](Groundwork.md#ptw--pointer-watchers-and-the-other-always-present-watchers) | Engine | No pointer watchers: `pedStatus` and `weaponSlotMelee` (behind `+0x77CD98`) and the stunt-jump records need them, for Against All Odds, the warps and stunt jumps | Medium |
-| [STL](Groundwork.md#stl--stale-old-after-a-gap-kept-from-the-asl) | Engine | Watchers copy the ASL's stale Old on purpose: a watcher read after a gap compares with its last read, possibly a mission ago, and can split on nothing; fix it once the ports are compared, in the engine and the comparison harness alike | Low |
 
 ## Los Santos story — [LosSantos.md](LosSantos.md)
 

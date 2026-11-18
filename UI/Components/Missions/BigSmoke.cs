@@ -116,8 +116,8 @@ namespace LiveSplit.UI.Components.SplitSpammer
 				}
 				if (engine.LastStartedMission != Mission.Thread)
 					return null;
-				// After a failed Big Smoke the engine stops reading this until the retry, whose first read compares with the
-				// value at the fail. The retry starts at 0, and no split ends at 0.
+				// After a failed Big Smoke the engine stops reading this until the retry, whose first read comes after a gap and
+				// counts as unchanged (WatcherSet).
 				IntWatcher dialogueBlock = w.Get("intro1_chat_switch");
 				if (dialogueBlock.Changed)
 				{

@@ -60,7 +60,12 @@ namespace LiveSplit.UI.Components.SplitSpammer
 	{
 		public bool Changed { get; protected set; }
 
-		internal abstract void Update(IGameReader reader);
+		// For WatcherSet: the tick and the context of the last read
+		internal int LastReadTick = -1;
+		internal int LastReadContext;
+
+		/// <param name="afterGap">The read counts as unchanged: Old becomes the value read</param>
+		internal abstract void Update(IGameReader reader, bool afterGap);
 	}
 
 	/// <summary>An int in the game's memory, with the value it had at the previous read.</summary>
@@ -84,8 +89,8 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 		// Same as the ASL's MemoryWatcher<int> (LiveSplit.ComponentUtil in LiveSplit.Core), checked against the real class
 		// 2026-11-14: every update moves Current to Old; the first successful read counts as unchanged and leaves Old at 0;
-		// a failed read leaves Current alone, so Old becomes equal to it.
-		internal override void Update(IGameReader reader)
+		// a failed read leaves Current alone, so Old becomes equal to it. Unlike it, a read after a gap counts as unchanged.
+		internal override void Update(IGameReader reader, bool afterGap)
 		{
 			Old = Current;
 			if (!reader.TryReadInt(ModuleOffset, out int value))
@@ -94,6 +99,8 @@ namespace LiveSplit.UI.Components.SplitSpammer
 				return;
 			}
 			Current = value & mask;
+			if (afterGap)
+				Old = Current;
 			Changed = hasValue && Old != Current;
 			hasValue = true;
 		}
@@ -120,16 +127,17 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		// Same as the ASL's StringWatcher with ReadStringType.AutoDetect (LiveSplit.ComponentUtil), checked against the real
 		// class 2026-11-15. Unlike MemoryWatcher<int>, a failed read leaves Old alone too, so a change across it is still seen
 		// on the next good read. A pointer that is null or can't be read is a failed read. The first good read counts as
-		// unchanged and leaves Old null.
-		internal override void Update(IGameReader reader)
+		// unchanged and leaves Old null. Unlike it, a read after a gap counts as unchanged.
+		internal override void Update(IGameReader reader, bool afterGap)
 		{
 			if (!Location.TryRead(reader, buffer))
 			{
 				Changed = false;
 				return;
 			}
-			Old = Current;
-			Current = Decode(buffer);
+			string value = Decode(buffer);
+			Old = afterGap ? value : Current;
+			Current = value;
 			Changed = hasValue && !string.Equals(Old, Current, StringComparison.Ordinal);
 			hasValue = true;
 		}
@@ -145,9 +153,12 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 	/// <summary>
 	/// The memory the checks watch. A watcher is read lazily, at most once per tick, when a check asks for it, as the ASL's
-	/// GetWatcher does: the lazy reads decide what Old is, so they are kept exact. There is one watcher per address, as in
-	/// the ASL, under any number of names: the leak names a mission local differently in each mission that uses it, and
-	/// every mission shares its Old. Each module registers every watcher it reads. Used from the poll thread only.
+	/// GetWatcher does: the lazy reads decide what Old is, so they are kept exact. Old is the value at the last read, so a
+	/// change in a tick in which a check skipped the read is seen on the next one; but unlike the ASL, a read after a gap
+	/// across a new context (a mission started or ended, a timer reset, the game lost) counts as unchanged, so it can't
+	/// compare with a value from another mission or another game. There is one watcher per address, as in the ASL, under
+	/// any number of names: the leak names a mission local differently in each mission that uses it, and every mission
+	/// shares its Old. Each module registers every watcher it reads. Used from the poll thread only.
 	/// </summary>
 	public class WatcherSet
 	{
@@ -156,6 +167,8 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		readonly Dictionary<int, IntWatcher> byAddress = new Dictionary<int, IntWatcher>();
 		readonly Dictionary<MemoryLocation, StringWatcher> stringsByLocation = new Dictionary<MemoryLocation, StringWatcher>();
 		readonly HashSet<Watcher> readThisTick = new HashSet<Watcher>();
+		int tick;
+		int context;
 
 		public WatcherSet(IGameReader reader)
 		{
@@ -234,7 +247,18 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		public void AddScmMissionLocal(string name, int n) => Add(name, GameAddresses.ScmMissionLocal(n));
 
 		/// <summary>Starts a tick: every watcher may be read again.</summary>
-		public void NewTick() => readThisTick.Clear();
+		public void NewTick()
+		{
+			readThisTick.Clear();
+			tick++;
+		}
+
+		/// <summary>
+		/// Something changed that makes an old read meaningless: a mission started or ended, the timer was reset, the game
+		/// was lost. A watcher not read in the previous tick counts its next read as unchanged; one read every tick still
+		/// reports a change across it, since that happened between two ticks.
+		/// </summary>
+		public void NewContext() => context++;
 
 		public IntWatcher Get(string name) => Get<IntWatcher>(name);
 
@@ -248,7 +272,12 @@ namespace LiveSplit.UI.Components.SplitSpammer
 				throw new ArgumentException($"The watcher {name} is not a {typeof(T).Name}");
 			// Per watcher, not per name: two names for one address read it once a tick
 			if (readThisTick.Add(typed))
-				typed.Update(reader);
+			{
+				bool afterGap = typed.LastReadTick >= 0 && typed.LastReadTick < tick - 1 && typed.LastReadContext != context;
+				typed.Update(reader, afterGap);
+				typed.LastReadTick = tick;
+				typed.LastReadContext = context;
+			}
 			return typed;
 		}
 	}

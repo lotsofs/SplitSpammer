@@ -106,17 +106,16 @@ namespace LiveSplit.UI.Components.SplitSpammer
 						return intro2_markerEnteredAfterFail;
 					return null;
 				}
+				// Read only while Ryder is in progress, so the first read as it starts comes after a gap and counts as unchanged
+				// (WatcherSet). In the ASL it compared with the last attempt's read, and a save loaded with the flag already 1
+				// split this on starting Ryder.
 				IntWatcher failed = w.Get("can_skip_smoking_cutscene");
-				// Read earlier than in the ASL; the engine reads it every tick, so this changes nothing
-				StringWatcher thread = w.GetString("thread");
-				// Not in the tick Ryder starts, unlike the ASL: the flag is read only while Ryder is in progress, so its first read
-				// then compares with the last attempt's, and a save loaded with the flag already 1 split the fail on starting.
-				// A fail can't happen in the tick the mission starts.
-				if (failed.Changed && failed.Current == 1 && !(thread.Changed && thread.Current == Mission.Thread))
+				if (failed.Changed && failed.Current == 1)
 					return intro2_failed;
 				// The engine has cleared the last started mission after the fail, so the thread step tries intro2_started again
 				// (already done, not split) before this check runs. After a fail in this run, where the ASL tests the fail flag,
 				// which is saved: it split this on starting Ryder in a save in which Ryder was failed before.
+				StringWatcher thread = w.GetString("thread");
 				IntWatcher missionActive = w.Get("flag_player_on_menace_mission");
 				if (thread.Changed && thread.Current == Mission.Thread && engine.IsDone(intro2_failed) && missionActive.Current == 0)
 					return intro2_restarted;

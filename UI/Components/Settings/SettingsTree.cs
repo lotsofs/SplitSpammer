@@ -44,6 +44,8 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			tree.Add("Missions", "Story missions", true, "Missions with a visible-anywhere minimap marker until completion", "Splits");
 			tree.Add("LS", "Los Santos", true, null, "Missions");
 			tree.Add("LS_Intro", "Intro", true, null, "LS");
+			// Its children mix groups and missions, so each group under it is added by its first module
+			tree.Add("SideMissions", "Side missions", true, null, "Splits");
 			foreach (IModule module in Modules.All())
 				module.AddSettings(tree);
 			return tree;

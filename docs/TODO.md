@@ -15,6 +15,12 @@ The ASL's content is ported one item at a time: one item per mission, side missi
 | [SLD](Component.md#sld--start-and-reset-the-timer-when-loading-a-save) | Timer control | The ASL's "Start/Reset timer when loading save" options are not ported (they never worked in the live script); the recent-update ASL does the start one from the loading byte at `+0x7A67A5`, so both can be added that way, off by default | Low |
 | [LRM](Component.md#lrm--load-removal) | Timer control | No load removal: GTA SA is timed in real time and the ASL has no isLoading block; if a loadless category ever wants it, pause game time through `IsGameTimePaused` and `SetGameTime` | Low |
 
+## Live checks — [Live.md](Live.md)
+
+| Code | Area | Summary | Severity |
+|---|---|---|---|
+| [LIV](Live.md#liv--seen-working-on-the-running-game) | Missions | Ported missions checked headless but not yet seen splitting in LiveSplit on the running game: Ryder, with its fail and retry, and Firefighter, with the pass the tick after level 12 | Medium |
+
 ## Porting groundwork — [Groundwork.md](Groundwork.md)
 
 | Code | Area | Summary | Severity |
@@ -157,7 +163,6 @@ The ASL's content is ported one item at a time: one item per mission, side missi
 |---|---|---|---|
 | [CUR](SideMissions.md#cur--courier) | Courier | Port Courier (`bcour`): each city's start, deliveries per level, levels and pass, from the city, level and delivery locals | Low |
 | [TRK](SideMissions.md#trk--trucking) | Trucking | Port Trucking (`truck`): eight missions told apart by the trucking counter, the marker from the odd-job text | Low |
-| [FFT](SideMissions.md#fft--firefighter) | Vehicle submissions | Port Firefighter (`firetru`): 78 fires, twelve levels and the pass | Low |
 | [RAC](SideMissions.md#rac--races) | Races | Port the races (`cprace`): 25 races' checkpoints and wins, the checkpoint local picked by race type | Low |
 | [CHL](SideMissions.md#chl--chiliad-challenge) | Vehicle challenges | Port the Chiliad Challenge (`mtbiker`): three routes' marker, countdown, checkpoints and win; it reads mission locals whatever mission runs | Low |
 | [PRP](SideMissions.md#prp--properties) | Properties | Port the property purchases: 30 flags of `already_bought_house[]`, read every tick | Low |

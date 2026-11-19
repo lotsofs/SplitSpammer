@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SplitSpammer will be a LiveSplit layout component (.NET Framework 4.8.1 class library, WinForms) that auto splits GTA San Andreas. It reads the game's memory itself, has a settings tree you can collapse and expand, splits through LiveSplit's timer, and is unit-tested without the game. It replaces `GTASA.asl`, which grew too large for one ASL file (ASL has no includes and can't be tested without LiveSplit and the game), and the auto-splitting runtime was ruled out because its settings dialog can't collapse.
 
-**Status: early.** The component loads, starts and resets the timer on a new game and splits on In the Beginning (all seen in LiveSplit) and Big Smoke (seen live), and Ryder (not yet seen live): a factory, a component with a poll thread that reads the game, and a settings panel with the game status and the settings tree. All planned work is tracked as items, each with its design written down.
+**Status: early.** The component loads, starts and resets the timer on a new game and splits on In the Beginning (all seen in LiveSplit), Big Smoke (seen live), Ryder and the Firefighter side mission (neither seen live yet, see docs/Live.md): a factory, a component with a poll thread that reads the game, and a settings panel with the game status and the settings tree. All planned work is tracked as items, each with its design written down.
 
 ## Tracked work
 

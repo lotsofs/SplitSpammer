@@ -14,7 +14,7 @@ Watchers: `$1992` (`courierLA_passed_once`), `$1994` (`courierSF_passed_once`), 
 
 **Evidence:** read 2026-11-15, region "Courier". A city of 0 builds ids with no setting (porting.md, step 3). The dead region of the same name in `split` is an older version.
 
-**Plan:** as porting.md. Adds the `SideMissions` node.
+**Plan:** as porting.md. Its `courier` node goes under `SideMissions`, before `VehicleSubmissions` (the module before Firefighter in `Modules.All`).
 
 **Verify:** the comparison passes; in LiveSplit, one city's start, deliveries, a level and the pass.
 
@@ -31,20 +31,6 @@ Watchers: `$8159` (`g_nTruckMissionsPassed`), `oddMissionStartText` (a string wa
 **Plan:** as porting.md.
 
 **Verify:** the comparison passes; in LiveSplit, two trucking missions in a row, all their events.
-
-**Docs when done:** as porting.md, step 7.
-
-## FFT — Firefighter
-
-The ASL's region "Firefighter" under "Vehicle submissions": settings `VehicleSubmissions` (on) holding `firefighter` (on) with "Mission Started for the first time", a Levels node with twelve levels, a Fires Extinguished node with 78 fires (labels built in a loop with each fire's level and number), and the pass (off). Thread `firetru` splits the start. The check needs `firetru`; splits every fire between Old and Current; a level rising from above 0 splits the old level and returns; the passed flag becoming 2 splits the pass.
-
-Watchers: `$8214` (`db_fires_extinguished`), `$8213` (`db_firetruck_level`), `$1489` (`done_firetruck_progress`).
-
-**Evidence:** read 2026-11-15, region "Firefighter". "For the first time" relies on once-per-reset.
-
-**Plan:** as porting.md. Adds the `VehicleSubmissions` node.
-
-**Verify:** the comparison passes; in LiveSplit, the start, a few fires and two levels.
 
 **Docs when done:** as porting.md, step 7.
 
@@ -132,7 +118,7 @@ Not in the live ASL. The old script had "Vigilante Started" and "Vigilante Start
 
 **Evidence:** read 2026-11-15.
 
-**Plan:** as the note above, under `VehicleSubmissions`, following Firefighter's shape (start, levels, pass). "After Learning to Fly" needs that mission's passed flag (`$87`, `pilot_test_passed`).
+**Plan:** as the note above, under `VehicleSubmissions`, following `Firefighter.cs` (start, levels, pass). "After Learning to Fly" needs that mission's passed flag (`$87`, `pilot_test_passed`).
 
 **Verify:** tests with a fake reader; in LiveSplit, the start and a level.
 

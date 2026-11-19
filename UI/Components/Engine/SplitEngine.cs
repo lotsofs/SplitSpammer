@@ -40,8 +40,9 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		readonly HashSet<string> done = new HashSet<string>();
 		readonly Queue<string> queue = new Queue<string>();
 		// The ASL's vars.significantThreads and vars.missionNames: a thread or a marker text, and the split id it splits
-		// (null or empty for none)
+		// (null or empty for none); a thread's split can have a condition
 		readonly Dictionary<string, string> threads = new Dictionary<string, string>();
+		readonly Dictionary<string, Func<bool>> threadSplitConditions = new Dictionary<string, Func<bool>>();
 		readonly Dictionary<string, string> missionNames = new Dictionary<string, string>();
 		long? lastSplitMs;
 
@@ -96,7 +97,14 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		/// When this thread starts (other than as the last started mission), it becomes the last started mission and splits
 		/// the id, if there is one. A thread registered twice throws, as the ASL's dictionary does.
 		/// </summary>
-		public void RegisterThread(string thread, string splitId) => threads.Add(thread, splitId);
+		/// <param name="splitIf">Not the ASL: when given, the id is only tried while this is true. The thread still becomes the
+		/// last started mission, and a start that doesn't split isn't counted as done, so a later start can split.</param>
+		public void RegisterThread(string thread, string splitId, Func<bool> splitIf = null)
+		{
+			threads.Add(thread, splitId);
+			if (splitIf != null)
+				threadSplitConditions.Add(thread, splitIf);
+		}
 
 		/// <summary>When this mission name appears as the marker text, split the id. A name registered twice throws.</summary>
 		public void RegisterMissionName(string text, string splitId) => missionNames.Add(text, splitId);
@@ -301,7 +309,12 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			if (LastStartedMission == thread.Current || !threads.TryGetValue(thread.Current, out string id))
 				return;
 			if (!string.IsNullOrEmpty(id))
-				TrySplit(id);
+			{
+				if (!threadSplitConditions.TryGetValue(thread.Current, out Func<bool> splitIf) || splitIf())
+					TrySplit(id);
+				else
+					DebugOutput.Write("split held back (its condition is not met): " + id);
+			}
 			LastStartedMission = thread.Current;
 			Watchers.NewContext();
 		}

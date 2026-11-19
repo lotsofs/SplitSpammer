@@ -42,6 +42,30 @@ The ASL has the settings "Start timer when loading save" and "Reset timer when l
 
 **Docs when done:** README, CHANGELOG.md Unreleased, docs/architecture.md (game memory).
 
+## HBD — "Held back" logged for a start already split
+
+When a registered thread with a `splitIf` condition starts again after its split is done, the thread step tests the condition first, and when it fails, the trace says `split held back (its condition is not met)` instead of `split prevented (already done)`. Nothing splits wrongly; the trace misleads, and the condition's watchers (CJ's position, for Firefighter's start) are read for nothing.
+
+**Evidence:** reproduced 2026-11-19 in LiveSplit: Firefighter started at 16:45 in Northeast Los Santos and split; restarted at 16:51 in East Los Santos, the trace logged `split held back (its condition is not met): firetru_started`.
+
+**Plan:** in `SplitEngine.ThreadStep`, test whether the id is already done (a read of `done`, without adding) before calling `splitIf`; when it is, call `TrySplit` so it logs "already done" as now.
+
+**Verify:** headless (FireCheck's start scenarios): with the area option on, a second start outside logs "already done" and doesn't read the position; a first start outside still logs "held back".
+
+**Docs when done:** docs/architecture.md (the thread step).
+
+## RPT — A split already done logged every tick
+
+A check that tests a state rather than a change returns its id every tick while the state holds, and each return logs `split prevented (already done)`. Big Smoke's "Left CJ's house after passing" (`intro1_ryderMarkerShown`) holds from Ryder's marker appearing until the house help reaches 3 or Ryder starts, up to about 6 s, so it logs a line about every 47 ms. Nothing splits twice; the trace fills with noise.
+
+**Evidence:** reproduced 2026-11-19 in LiveSplit: about 90 lines from 16:56:16 to 16:56:20, until Ryder started.
+
+**Plan:** in `SplitEngine.TrySplit`, log "already done" only the first time per id since the last reset (a second set, cleared with `done`). That fixes every state-test check, not only this one, and keeps the check as the ASL-style state test it is.
+
+**Verify:** headless: an id returned on ten ticks after it split logs "already done" once; after a timer reset it splits again.
+
+**Docs when done:** docs/architecture.md (the trace), docs/Live.md's opening (what the trace logs).
+
 ## LRM — Load removal
 
 GTA SA is timed in real time and the ASL has no `isLoading` block, so the component does not pause game time. If a loadless category ever wants it, LiveSplit's game time can be paused through `LiveSplitState.IsGameTimePaused` and set with `SetGameTime`, posted to the UI thread like the other timer actions.

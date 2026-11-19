@@ -32,12 +32,16 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		{
 			state = new SettingsState(tree);
 
+			// Docked, not anchored: LiveSplit's Layout Settings dialog makes the panel briefly much larger as it opens, and an
+			// anchored tree grew with it and kept that size, so its scrollbars ended up outside the panel (measured with UI
+			// Automation 2026-11-19: a 788 x 813 tree in a 476 x 500 panel). Docking sizes the tree from the panel every time.
 			statusLabel = new Label
 			{
-				AutoSize = true,
-				Location = new Point(7, 7),
+				AutoSize = false,
+				Height = 23,
+				Dock = DockStyle.Top,
+				TextAlign = ContentAlignment.TopLeft,
 			};
-			Controls.Add(statusLabel);
 
 			menu = new ContextMenuStrip();
 			menu.Items.Add("Expand tree", null, (s, e) => treeView.ExpandAll());
@@ -52,14 +56,15 @@ namespace LiveSplit.UI.Components.SplitSpammer
 				CheckBoxes = true,
 				ShowNodeToolTips = true,
 				HideSelection = false,
-				Location = new Point(7, 30),
-				Size = new Size(462, 463),
-				Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
+				Dock = DockStyle.Fill,
 			};
 			treeView.AfterCheck += TreeView_AfterCheck;
 			treeView.NodeMouseClick += TreeView_NodeMouseClick;
+			// The fill first: docking lays out the last added first, so the label takes the top and the tree the rest
 			Controls.Add(treeView);
+			Controls.Add(statusLabel);
 
+			Padding = new Padding(7);
 			Size = new Size(476, 500);
 			FillTree(tree);
 			SetGameStatus(GameStatus.Waiting);
@@ -74,8 +79,10 @@ namespace LiveSplit.UI.Components.SplitSpammer
 				foreach (SettingNode root in tree.Roots)
 					AddTreeNode(treeView.Nodes, root);
 				ShowStates(treeView.Nodes);
+				// Everything open, scrolled to the top
+				treeView.ExpandAll();
 				if (treeView.Nodes.Count > 0)
-					treeView.Nodes[0].Expand();
+					treeView.Nodes[0].EnsureVisible();
 			}
 			finally
 			{

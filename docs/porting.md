@@ -22,7 +22,7 @@ How one mission (or side mission, collectible group, …) moves from `reference\
 
 These are facts about the ASL runtime that the ports depend on. The groundwork items build them; a port relies on them.
 
-- **Tick order:** the guards, then the thread step (read `thread`; when it changed to a thread other than the last started mission and that thread is registered, split its id if it has one and remember it as the last started mission), then the marker step (read `missionStartText`; when it changed to a registered mission name, split that id), then every check in order, then one queued split. A module registers its thread with `engine.RegisterThread(thread, id)` (a null id only remembers it) and its marker text with `engine.RegisterMissionName(text, id)`; registering one twice throws, as the ASL's dictionaries do. Both compare exactly, case included.
+- **Tick order:** the guards, then the thread step (read `thread`; when it changed to a thread other than the last started mission and that thread is registered, split its id if it has one and remember it as the last started mission), then the marker step (read `missionStartText`; when it changed to a registered mission name, split that id), then every check in order, then one queued split. A module registers its thread with `engine.RegisterThread(thread, id)` (a null id only remembers it; not the ASL, an optional `splitIf` condition is asked as the thread starts, and while it is false the thread still becomes the last started mission but its id isn't tried, so a later start can split) and its marker text with `engine.RegisterMissionName(text, id)`; registering one twice throws, as the ASL's dictionaries do. Both compare exactly, case included.
 - **The last started mission** (`engine.LastStartedMission`) is cleared on a timer reset, and, **unlike the ASL**, at the end of the tick in which its thread is no longer in the game's script list (passed, failed, or a save loaded). The checks still see it in that tick, and a passed mission's counter is already written when its thread leaves the list (seen on the running game, 2026-11-15: Big Smoke's `$448` and the end of `intro1` in the same millisecond), so the pass still splits. From the next tick a mission's checks read nothing, where the ASL's went on reading mission locals that the next mission script overwrites. `engine.IsRunning(thread)` asks whether any script of that name is running.
 - **String watchers** (`thread`, `missionStartText`, `oddMissionStartText`, added by the engine) copy LiveSplit's `StringWatcher`: Old is null after the first read, and a failed read (a null pointer too) leaves both Old and Current alone, unlike an int watcher, so a change across a failed read is seen on the next good one.
 - **Where CJ is** (not in the ASL): `engine.Watchers.AddPlayerPosition()` adds `playerPosition` (`GetPosition`), with `IsIn`, `Entered` and `Left` for a `Box`: `Box.Around(x, y, z, rx, ry, rz)` takes the numbers of the script's `LOCATE_CHAR_*_3D` commands, `Box.Between` two corners as `IS_CHAR_IN_AREA_3D`, and both have 2D forms. `AddZone()` adds `zone` (`GetZone`), the label of the zone CJ is in (`JEF2`), with `Entered(label)` and `Left(label)`; `AddVehicleModel()` adds `vehicleModel`, the model of his vehicle or −1. Being the engine's own, their first read and a failed read leave Old equal to Current.
@@ -42,7 +42,7 @@ These are facts about the ASL runtime that the ports depend on. The groundwork i
 | 5353 | `intro_cutsceneState` | `cutscene_skip_CUT` | ITB (ported) |
 | 54 | `intro_groveStreet` | `voice_over_at_hub` | ITB (ported), GSH |
 | 43 | `interior` | `main_visible_area` | BSM (ported), RYD (ported) |
-| 448 | `ls_intro_chain` | `flag_intro_mission_counter` | BSM (ported), RYD (ported) |
+| 448 | `ls_intro_chain` | `flag_intro_mission_counter` | BSM (ported), RYD (ported), FFT (ported, not from the ASL) |
 | 65 | `bs_houseHelp` | `funeral_mission_finished` | BSM (ported) |
 | 169 | `r_onMission` | `flag_player_on_menace_mission` | RYD (ported) |
 | 676 | `r_barberBought` | `flag_changed_hair_intro2` | RYD (ported) |
@@ -83,6 +83,7 @@ These are facts about the ASL runtime that the ports depend on. The groundwork i
 | 1489 | `firefighter_passed` | `done_firetruck_progress` | FFT (ported) |
 | 8213 | `firefighter_currentLevel` | `db_firetruck_level` | FFT (ported) |
 | 8214 | `firefighter_firesExtinguished` | `db_fires_extinguished` | FFT (ported) |
+| 409 | — | `flag_player_on_mission` (`$ONMISSION`) | FFT (ported, not from the ASL; seen 2026-11-19: 0 off a mission, 1 during In the Beginning, Firefighter, Big Smoke and Ryder, and also 1 for a few seconds at a time while CJ is at a save point) |
 | 352 | `race_index` | `race_selection` | RAC |
 | 2300–2326 | `race0`–`race26` | `got_race_made_progress[0]`–`[26]` | RAC, SRC |
 | 1799 | `mtbiker_nextRace` | `mtbikerace_selection` | CHL |

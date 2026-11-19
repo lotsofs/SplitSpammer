@@ -12,6 +12,8 @@ The ASL's content is ported one item at a time: one item per mission, side missi
 |---|---|---|---|
 | [TST](Component.md#tst--headless-test-project) | Tests | No test project: an xunit project that drives the component headless with a fake game reader and LiveSplit's timer model, and the harness that compares a ported mission with the ASL's logic | High |
 | [GSH](Component.md#gsh--split-at-the-start-of-the-grove-street---home-lines) | Missions | The `intro_groveStreetLinePlayed` split fires when the second "Grove Street - Home" line starts, because `$54` is only set then: make it fire when the first line starts, probably by watching the subtitle text with a string watcher, and fix its label | Low |
+| [HBD](Component.md#hbd--held-back-logged-for-a-start-already-split) | Engine | A thread split with a condition (Firefighter's start in Northeast Los Santos) that starts again after it is done logs `split held back` instead of `already done`, because the condition is tested first | Low |
+| [RPT](Component.md#rpt--a-split-already-done-logged-every-tick) | Engine | A check testing a state (Big Smoke's "Left CJ's house after passing") logs `split prevented (already done)` every tick while the state holds, about 90 lines before Ryder starts; log it once per id | Low |
 | [SLD](Component.md#sld--start-and-reset-the-timer-when-loading-a-save) | Timer control | The ASL's "Start/Reset timer when loading save" options are not ported (they never worked in the live script); the recent-update ASL does the start one from the loading byte at `+0x7A67A5`, so both can be added that way, off by default | Low |
 | [LRM](Component.md#lrm--load-removal) | Timer control | No load removal: GTA SA is timed in real time and the ASL has no isLoading block; if a loadless category ever wants it, pause game time through `IsGameTimePaused` and `SetGameTime` | Low |
 
@@ -19,7 +21,7 @@ The ASL's content is ported one item at a time: one item per mission, side missi
 
 | Code | Area | Summary | Severity |
 |---|---|---|---|
-| [LIV](Live.md#liv--seen-working-on-the-running-game) | Missions | Ported missions checked headless but not yet seen splitting in LiveSplit on the running game: Ryder, with its fail and retry, and Firefighter, with the pass the tick after level 12 | Medium |
+| [LIV](Live.md#liv--seen-working-on-the-running-game) | Missions | Ported missions not yet fully seen splitting in LiveSplit on the running game: Ryder's first marker entry (no marker text appeared on it), loading an earlier save and disabled; Firefighter's Firetruck entered on a mission, after Ryder and in the ladder truck, the start held back outside Northeast Los Santos, and a fail mid-level | Medium |
 
 ## Porting groundwork — [Groundwork.md](Groundwork.md)
 

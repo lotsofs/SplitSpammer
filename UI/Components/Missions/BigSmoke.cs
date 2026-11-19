@@ -102,15 +102,19 @@ namespace LiveSplit.UI.Components.SplitSpammer
 						// Any interior the game numbers 3, not only CJ's house; the game itself also tests the position (CJH)
 						if ((houseHelp.Current == 1 || houseHelp.Current == 0) && interior.Current == 3)
 							return intro1_houseEntered;
+						// The ASL returns this. Queued here instead, in the same tick, so the tests below still run: they read
+						// only the house help, already read, and the script list, which is not a watcher, so the reads are the
+						// ASL's and every Old stays as it would be
 						if (houseHelp.Current == 2 && interior.Current == 0)
-							return intro1_houseLeft;
+							engine.TrySplit(intro1_houseLeft);
 					}
-					// Not in the ASL, after its tests so they never take a tick from one of its splits
+					// Not in the ASL, after its tests
 					if (houseHelp.Changed && houseHelp.Current == 2 && houseHelp.Old == 1)
 						return intro1_savePointCameraEnded;
-					// The marker script never runs while the help is 2 before it is restarted, so this fires on the tick it
-					// starts, or on the next if leaving the house took that tick
-					if (houseHelp.Current == 2 && engine.IsRunning(IntroMarkerScript))
+					// The marker script restarting while the help is 2, in the tick it starts. A test of it running instead
+					// (as before 2026-11-19) held from Ryder's marker appearing until the help reached 3 or Ryder started, up
+					// to 6 s, and returned this every tick of it.
+					if (houseHelp.Current == 2 && engine.HasStarted(IntroMarkerScript))
 						return intro1_ryderMarkerShown;
 					return null;
 				}

@@ -95,17 +95,16 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			// The ASL's order of reads and early returns
 			engine.AddCheck(() =>
 			{
+				// Not in the ASL. First, before any read: the marker is entered with the mission not in progress (the engine
+				// has cleared the last started mission after the fail; the text comes about 0.5 s before the thread, seen
+				// 2026-11-16), or, when the replay trick hides the text, in the tick the retry's thread starts and the
+				// mission is in progress again (SplitEngine.MarkerEnteredThisTick). Queued, so a split below in that tick
+				// still comes. After a fail in this run, not just the flag: it is saved, so it is also 1 in a save in which
+				// Ryder was failed before.
+				if (engine.MarkerEnteredThisTick == Mission.MarkerText && engine.IsDone(intro2_failed))
+					engine.TrySplit(intro2_markerEnteredAfterFail);
 				if (!Mission.InProgress(engine, "flag_intro_mission_counter", 1, 2))
-				{
-					// Not in the ASL. Here, because between a fail and the retry's thread the mission is not in progress (the
-					// engine has cleared the last started mission), and the marker text comes about 0.5 s before the thread (seen
-					// on the running game, 2026-11-16). After a fail in this run, not just the flag: it is saved, so it is also 1
-					// in a save in which Ryder was failed before.
-					StringWatcher markerText = w.GetString("missionStartText");
-					if (markerText.Changed && markerText.Current == Mission.MarkerText && engine.IsDone(intro2_failed))
-						return intro2_markerEnteredAfterFail;
 					return null;
-				}
 				// Read only while Ryder is in progress, so the first read as it starts comes after a gap and counts as unchanged
 				// (WatcherSet). In the ASL it compared with the last attempt's read, and a save loaded with the flag already 1
 				// split this on starting Ryder.

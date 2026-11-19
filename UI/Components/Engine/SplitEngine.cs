@@ -44,6 +44,13 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		readonly Dictionary<string, string> threads = new Dictionary<string, string>();
 		readonly Dictionary<string, Func<bool>> threadSplitConditions = new Dictionary<string, Func<bool>>();
 		readonly Dictionary<string, string> missionNames = new Dictionary<string, string>();
+		// Not the ASL: a story mission's thread and its marker text, for the marker entered without its text (ThreadStep)
+		readonly Dictionary<string, string> threadMarkers = new Dictionary<string, string>();
+		// How long after $ONMISSION rises a mission's thread may start and still count as its marker entered: the marker
+		// script's walk and fade take about 3.5 s
+		const int MarkerFallbackWindowMs = 5000;
+		long? onMissionRoseMs;
+		bool markerTextSeen;
 		long? lastSplitMs;
 
 		public WatcherSet Watchers { get; }
@@ -66,6 +73,19 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 		/// <summary>Whether a script of this name was in the game's script list at this tick's read (the last good one).</summary>
 		public bool IsRunning(string thread) => scripts.Contains(thread);
+
+		/// <summary>
+		/// Whether a script of this name is in this tick's read of the game's script list and wasn't in the previous good
+		/// one: for a check that splits as a script starts, once, rather than while it runs.
+		/// </summary>
+		public bool HasStarted(string thread) => scripts.HasStarted(thread);
+
+		/// <summary>
+		/// The marker text of the mission whose marker was entered in this tick, or null: from the text itself, or, when the
+		/// text never appeared, from the mission's thread starting just after $ONMISSION rose (see ThreadStep). For a check
+		/// that splits on a marker entry; reading missionStartText itself misses the second case.
+		/// </summary>
+		public string MarkerEnteredThisTick { get; private set; }
 
 		/// <summary>
 		/// Whether the id was tried since the last reset, split or blocked (TrySplit counts both as done): for a check that
@@ -91,6 +111,9 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			Watchers.AddString("thread", new MemoryLocation(GameAddresses.ActiveScripts, GameAddresses.ScriptName), 10);
 			Watchers.AddString("missionStartText", new MemoryLocation(GameAddresses.MissionStartText), 32);
 			Watchers.AddString("oddMissionStartText", new MemoryLocation(GameAddresses.OddMissionStartText), 32);
+			// Not the ASL: $ONMISSION, which every marker script sets to 1 as its marker is entered, in the frame it shows the
+			// mission's title (and so does a save point, while its menu is open). Read by the marker fallback.
+			Watchers.AddScmGlobal("flag_player_on_mission", 409);
 		}
 
 		/// <summary>
@@ -108,6 +131,17 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 		/// <summary>When this mission name appears as the marker text, split the id. A name registered twice throws.</summary>
 		public void RegisterMissionName(string text, string splitId) => missionNames.Add(text, splitId);
+
+		/// <summary>
+		/// A story mission's marker: its text splits the id, as <see cref="RegisterMissionName"/>. Not the ASL: when the text
+		/// never appears (the replay trick can skip it), the mission's thread starting within a few seconds of $ONMISSION
+		/// rising splits the id instead, just before the start. Register the thread with <see cref="RegisterThread"/> too.
+		/// </summary>
+		public void RegisterMissionMarker(string thread, string text, string splitId)
+		{
+			RegisterMissionName(text, splitId);
+			threadMarkers.Add(thread, text);
+		}
 
 		/// <summary>
 		/// Adds a split check: it reads watchers and calls TrySplit itself, or returns a split id (or null) for the engine
@@ -181,6 +215,8 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			done.Clear();
 			queue.Clear();
 			lastSplitMs = null;
+			onMissionRoseMs = null;
+			markerTextSeen = false;
 			LastStartedMission = "";
 			Watchers.NewContext();
 		}
@@ -255,8 +291,16 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			// Before the checks, which read LastStartedMission. One try for both steps: in the ASL an exception here ends
 			// the split block for the tick, but it would skip the checks too, which is worse.
 			bool scriptsRead = false;
+			MarkerEnteredThisTick = null;
 			try
 			{
+				// Read every tick, so a rise is seen in its tick. A rise starts a new wait for the marker text.
+				IntWatcher onMission = Watchers.Get("flag_player_on_mission");
+				if (onMission.Changed && onMission.Old == 0 && onMission.Current == 1)
+				{
+					onMissionRoseMs = nowMs();
+					markerTextSeen = false;
+				}
 				ThreadStep();
 				// After the thread step, before the checks: a passed mission writes its counter before it ends, so when the
 				// list shows it gone, the checks below already see the counter
@@ -304,13 +348,13 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			StringWatcher thread = Watchers.GetString("thread");
 			if (!thread.Changed)
 				return;
-			// To see on the running game what the names look like (case, padding) before relying on them
-			DebugOutput.Write($"thread: {Quote(thread.Old)} -> {Quote(thread.Current)}");
 			if (LastStartedMission == thread.Current || !threads.TryGetValue(thread.Current, out string id))
 				return;
+			MarkerFallback(thread.Current);
 			if (!string.IsNullOrEmpty(id))
 			{
-				if (!threadSplitConditions.TryGetValue(thread.Current, out Func<bool> splitIf) || splitIf())
+				// A start already done only says so: its condition isn't tested (nor its watchers read)
+				if (IsDone(id) || !threadSplitConditions.TryGetValue(thread.Current, out Func<bool> splitIf) || splitIf())
 					TrySplit(id);
 				else
 					DebugOutput.Write("split held back (its condition is not met): " + id);
@@ -328,6 +372,31 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			DebugOutput.Write($"missionStartText: {Quote(text.Old)} -> {Quote(text.Current)}");
 			if (string.IsNullOrEmpty(text.Current) || !missionNames.TryGetValue(text.Current, out string id))
 				return;
+			markerTextSeen = true;
+			MarkerEnteredThisTick = text.Current;
+			if (!string.IsNullOrEmpty(id))
+				TrySplit(id);
+		}
+
+		// Not the ASL. Every marker script, as its marker is entered, sets $ONMISSION to 1 and shows the mission's title in
+		// the same frame, walks CJ in and fades (about 3.5 s), then starts the mission (INT, SWEET and the others in the
+		// decompiled main.scm). The replay trick skips the walk and the fade and can skip the title too: on 2026-11-19 Ryder's
+		// thread started 62 ms after $ONMISSION rose, with no text. So when a story mission's thread starts within the window
+		// of a rise and no marker text came with it, its marker counts as entered now, just before its start. A save point
+		// also raises $ONMISSION, but starts no mission thread.
+		void MarkerFallback(string thread)
+		{
+			if (!threadMarkers.TryGetValue(thread, out string text) || markerTextSeen || !onMissionRoseMs.HasValue)
+				return;
+			if (nowMs() - onMissionRoseMs.Value > MarkerFallbackWindowMs)
+				return;
+			// The text in this very tick, which the marker step reads after this one
+			if (Watchers.GetString("missionStartText").Current == text)
+				return;
+			markerTextSeen = true;
+			MarkerEnteredThisTick = text;
+			DebugOutput.Write("marker text not seen; marker entered from $ONMISSION: " + text);
+			string id = missionNames[text];
 			if (!string.IsNullOrEmpty(id))
 				TrySplit(id);
 		}

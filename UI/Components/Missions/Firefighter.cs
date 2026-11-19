@@ -25,11 +25,12 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		// Ryder is passed when the intro chain's counter reaches this
 		const int RyderPassed = 2;
 
-		// Zone CHC4A (Las Colinas, x 2747..2959, y -1120..-945) and the strip north of it that no district covers, up to the
-		// edge of Los Santos (zone LA ends at y -768, Red County starts there), at any height. From the game's zone array,
+		// Zone CHC4A (Las Colinas, x 2747..2959, y -1120..-945), the strip north of it that no district covers, up to the
+		// edge of Los Santos (zone LA ends at y -768, Red County starts there), and as far south of it (177 units, into East
+		// Beach and Los Flores, where a Firetruck can wait just outside CHC4A), at any height. From the game's zone array,
 		// 2026-11-19.
-		static readonly Box NortheastLosSantos = Box.Between(2747, -1120, 2959, -768);
-		const string NortheastLosSantosTooltip = "Only in Las Colinas zone CHC4A or north of it up to the edge of Los Santos (x 2747 to 2959, y -1120 to -768).";
+		static readonly Box NortheastLosSantos = Box.Between(2747, -1297, 2959, -768);
+		const string NortheastLosSantosTooltip = "Only in or near Las Colinas zone CHC4A (x 2747 to 2959, y -1297 to -768).";
 		const string HeldBackTooltip = " Otherwise it doesn't split, and a later one still can.";
 
 		static string HeldBack(string reason)

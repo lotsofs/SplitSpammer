@@ -1,7 +1,5 @@
-using LiveSplit.Options;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace LiveSplit.UI.Components.SplitSpammer
 {
@@ -23,6 +21,8 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		readonly byte[] nameBytes = new byte[NameBytes];
 		readonly bool[] seen = new bool[GameAddresses.ScriptCount];
 		HashSet<string> names = new HashSet<string>(StringComparer.Ordinal);
+		// The names before this update's read: the same set as names when the read failed, so nothing counts as started
+		HashSet<string> previous = new HashSet<string>(StringComparer.Ordinal);
 		bool hasValue;
 
 		/// <summary>The names in the list at the last good read, each once (the list can hold a name more than once).</summary>
@@ -30,9 +30,16 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 		public bool Contains(string name) => names.Contains(name);
 
+		/// <summary>
+		/// Whether the name is in the last read and wasn't in the one before it. False after a failed or rejected read, and on
+		/// the first read, which has nothing to compare with.
+		/// </summary>
+		public bool HasStarted(string name) => names.Contains(name) && !previous.Contains(name);
+
 		/// <summary>Reads the list. False when it could not be read or did not hold together; the names stay as they were.</summary>
 		public bool Update(IGameReader reader)
 		{
+			previous = names;
 			if (reader.ModuleBase == 0 || !reader.TryReadBytes(GameAddresses.IdleScripts, block))
 				return false;
 			long arrayStart = reader.ModuleBase + GameAddresses.ScriptsArray;
@@ -43,7 +50,8 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			if (idle < 0 || active + idle != GameAddresses.ScriptCount)
 				return false;
 
-			LogChanges(found);
+			if (!hasValue)
+				previous = found;
 			names = found;
 			hasValue = true;
 			return true;
@@ -77,20 +85,6 @@ namespace LiveSplit.UI.Components.SplitSpammer
 				pointer = (uint)BitConverter.ToInt32(block, record);
 			}
 			return count;
-		}
-
-		// To see on the running game which scripts come and go
-		void LogChanges(HashSet<string> found)
-		{
-			if (!hasValue)
-			{
-				DebugOutput.Write("scripts running: " + string.Join(" ", found.OrderBy(n => n, StringComparer.Ordinal)));
-				return;
-			}
-			string[] started = found.Where(n => !names.Contains(n)).ToArray();
-			string[] ended = names.Where(n => !found.Contains(n)).ToArray();
-			if (started.Length + ended.Length > 0)
-				DebugOutput.Write("scripts:" + string.Concat(started.Select(n => " +" + n)) + string.Concat(ended.Select(n => " -" + n)));
 		}
 	}
 }

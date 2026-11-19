@@ -48,11 +48,14 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		/// <summary>Last in AddSettings, after the events: "Mission passed" (on).</summary>
 		public void AddPassedSetting(SettingsTree tree) => tree.Add(PassedId, "Mission passed", true, null, Id);
 
-		/// <summary>In AddChecks: the thread splits the start and becomes the last started mission; the marker text splits the marker.</summary>
+		/// <summary>
+		/// In AddChecks: the thread splits the start and becomes the last started mission; the marker text splits the marker,
+		/// or, when the text never appears, the thread starting just after $ONMISSION rose (SplitEngine.RegisterMissionMarker).
+		/// </summary>
 		public void Register(SplitEngine engine)
 		{
 			engine.RegisterThread(Thread, StartedId);
-			engine.RegisterMissionName(MarkerText, MarkerEnteredId);
+			engine.RegisterMissionMarker(Thread, MarkerText, MarkerEnteredId);
 		}
 
 		/// <summary>

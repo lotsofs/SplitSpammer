@@ -53,6 +53,30 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		/// <summary>The same for odd jobs (Trucking).</summary>
 		public const int OddMissionStartText = 0x7AAEC0;
 
+		/// <summary>
+		/// The int that points at the vehicle CJ is in, 0 while he is in none. Seen on the running game 2026-11-19: it is
+		/// cleared once he is out, about a second after he starts getting out. The ped's own vehicle pointer (+0x58C in the
+		/// ped) keeps the last vehicle, so it can't tell.
+		/// </summary>
+		public const int PlayerVehicle = 0x7A18FC;
+		/// <summary>Where an entity's model id is, a short (in a vehicle: 566 Tahoma, 420 Taxi, seen 2026-11-19).</summary>
+		public const int ModelIndex = 0x22;
+
+		/// <summary>The int that points at the player ped (CWorld::Players[0].m_pPed); 0 in the main menu.</summary>
+		public const int PlayerPed = 0x77CD98;
+		/// <summary>Where an entity's position is while it has no matrix: the first 12 bytes of its placement.</summary>
+		public const int EntityPlacement = 0x4;
+		/// <summary>Where an entity's matrix pointer is.</summary>
+		public const int EntityMatrix = 0x14;
+		/// <summary>Where the position (x, y, z floats) is in a matrix.</summary>
+		public const int MatrixPosition = 0x30;
+
+		/// <summary>The number of zones in the zone array, a short (379, seen 2026-11-19).</summary>
+		public const int ZoneCount = 0x7A3794;
+		/// <summary>The zone array (CTheZones::NavigationZoneArray), right after the count.</summary>
+		public const int ZoneArray = 0x7A3798;
+		public const int ZoneRecordSize = 0x20;
+
 		/// <summary>Module offset of SCM global variable $n.</summary>
 		public static int ScmGlobal(int n) => ScmGlobalBase + n * 4;
 

@@ -374,7 +374,7 @@ Big Smoke's `intro1_houseEntered` copies the ASL: it splits when `$43` (`main_vi
 
 **Evidence:** read 2026-11-16 in `reference\main.scm.txt` (`INTROST`, the `$HELP_GROOVE_SHOWN == 1` block) and the leak's `intro_stuff_loop`. Which other interiors are 3 is not checked.
 
-**Plan:** after PTW, watch CJ's position through the player pointer the ASL already uses for `pedStatus`: `[+0x77CD98]` is the player ped, its matrix pointer is at `+0x14` and the position at `+0x30` (x, y, z floats). In the house test, also require CJ inside a box around the house's interior (near x 2496, y −1696, z above 1000). Check whether the position is already inside on the tick the interior number changes; if not, test it on the following ticks while the interior is 3 and the split hasn't fired. The ASL comparison then leaves this id out (porting.md, step 4).
+**Plan:** in the house test, also require `playerPosition` (`engine.Watchers.AddPlayerPosition()`) to be in `Box.Around(2496.05f, -1698.01f, 1013.75f, 10f, 10f, 5f)`, the game's own locate. Check whether the position is already inside on the tick the interior number changes; if not, test it on the following ticks while the interior is 3 and the split hasn't fired. The ASL comparison then leaves this id out (porting.md, step 4).
 
 **Verify:** in LiveSplit, after Big Smoke: entering another interior numbered 3 first splits nothing, and entering CJ's house still splits at the door.
 

@@ -25,7 +25,7 @@ The ASL's content is ported one item at a time: one item per mission, side missi
 
 | Code | Area | Summary | Severity |
 |---|---|---|---|
-| [PTW](Groundwork.md#ptw--pointer-watchers-and-the-other-always-present-watchers) | Engine | No pointer watchers: `pedStatus` and `weaponSlotMelee` (behind `+0x77CD98`) and the stunt-jump records need them, for Against All Odds, the warps and stunt jumps | Medium |
+| [PTW](Groundwork.md#ptw--the-always-present-pointer-watchers) | Engine | The ASL's always-present pointer watchers are not ported: `pedStatus` and `weaponSlotMelee` (behind `+0x77CD98`) and the stunt-jump records, for Against All Odds, the warps and stunt jumps; check `AddPointer`'s null pointer against the real `MemoryWatcher<int>` | Medium |
 
 ## Los Santos story — [LosSantos.md](LosSantos.md)
 

@@ -7,10 +7,18 @@ namespace LiveSplit.UI.Components.SplitSpammer
 {
 	/// <summary>
 	/// Where a watcher reads: a module offset, or, like LiveSplit's DeepPointer, a module offset holding a pointer followed
-	/// through any further offsets. The game is 32-bit, so every pointer is 4 bytes; a null pointer is a failed read.
+	/// through any further offsets. The game is 32-bit, so every pointer is 4 bytes.
 	/// </summary>
 	public sealed class MemoryLocation : IEquatable<MemoryLocation>
 	{
+		internal enum ReadResult
+		{
+			Read,
+			/// <summary>A pointer on the way was 0: nothing there, such as no vehicle while CJ is on foot.</summary>
+			NullPointer,
+			Failed,
+		}
+
 		readonly int[] offsets;
 
 		public int ModuleOffset { get; }
@@ -23,22 +31,27 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			this.offsets = offsets ?? new int[0];
 		}
 
-		public bool TryRead(IGameReader reader, byte[] buffer)
+		/// <summary>Fills the buffer; false on a failed read and on a null pointer, as DeepPointer does.</summary>
+		public bool TryRead(IGameReader reader, byte[] buffer) => Read(reader, buffer) == ReadResult.Read;
+
+		internal ReadResult Read(IGameReader reader, byte[] buffer)
 		{
 			if (offsets.Length == 0)
-				return reader.TryReadBytes(ModuleOffset, buffer);
-			if (!reader.TryReadInt(ModuleOffset, out int pointer) || pointer == 0)
-				return false;
+				return reader.TryReadBytes(ModuleOffset, buffer) ? ReadResult.Read : ReadResult.Failed;
+			if (!reader.TryReadInt(ModuleOffset, out int pointer))
+				return ReadResult.Failed;
+			if (pointer == 0)
+				return ReadResult.NullPointer;
 			var pointerBytes = new byte[4];
 			for (int i = 0; i < offsets.Length - 1; i++)
 			{
 				if (!reader.TryReadAbsoluteBytes(Address(pointer, offsets[i]), pointerBytes))
-					return false;
+					return ReadResult.Failed;
 				pointer = BitConverter.ToInt32(pointerBytes, 0);
 				if (pointer == 0)
-					return false;
+					return ReadResult.NullPointer;
 			}
-			return reader.TryReadAbsoluteBytes(Address(pointer, offsets[offsets.Length - 1]), buffer);
+			return reader.TryReadAbsoluteBytes(Address(pointer, offsets[offsets.Length - 1]), buffer) ? ReadResult.Read : ReadResult.Failed;
 		}
 
 		// A 32-bit pointer is unsigned
@@ -66,39 +79,53 @@ namespace LiveSplit.UI.Components.SplitSpammer
 
 		/// <param name="afterGap">The read counts as unchanged: Old becomes the value read</param>
 		internal abstract void Update(IGameReader reader, bool afterGap);
+
+		/// <summary>For a watcher that caches something from the game: the context changed, so drop it.</summary>
+		internal virtual void OnNewContext() { }
 	}
 
 	/// <summary>An int in the game's memory, with the value it had at the previous read.</summary>
 	public class IntWatcher : Watcher
 	{
 		readonly int mask;
+		readonly byte[] buffer = new byte[4];
 		bool hasValue;
 
 		public int Old { get; private set; }
 		public int Current { get; private set; }
 
-		internal int ModuleOffset { get; }
+		internal MemoryLocation Location { get; }
 		internal int Bytes { get; }
+		/// <summary>The value a null pointer reads as; null when a null pointer is a failed read.</summary>
+		internal int? WhenNull { get; }
 
-		internal IntWatcher(int moduleOffset, int bytes)
+		internal IntWatcher(MemoryLocation location, int bytes, int? whenNull)
 		{
-			ModuleOffset = moduleOffset;
+			Location = location;
 			Bytes = bytes;
+			WhenNull = whenNull;
 			mask = bytes == 1 ? 0xFF : bytes == 2 ? 0xFFFF : -1;
 		}
 
 		// Same as the ASL's MemoryWatcher<int> (LiveSplit.ComponentUtil in LiveSplit.Core), checked against the real class
 		// 2026-11-14: every update moves Current to Old; the first successful read counts as unchanged and leaves Old at 0;
-		// a failed read leaves Current alone, so Old becomes equal to it. Unlike it, a read after a gap counts as unchanged.
+		// a failed read leaves Current alone, so Old becomes equal to it. Unlike it, a read after a gap counts as unchanged,
+		// and a null pointer can be given a value of its own.
 		internal override void Update(IGameReader reader, bool afterGap)
 		{
 			Old = Current;
-			if (!reader.TryReadInt(ModuleOffset, out int value))
+			MemoryLocation.ReadResult result = Location.Read(reader, buffer);
+			int value;
+			if (result == MemoryLocation.ReadResult.Read)
+				value = BitConverter.ToInt32(buffer, 0) & mask;
+			else if (result == MemoryLocation.ReadResult.NullPointer && WhenNull.HasValue)
+				value = WhenNull.Value;
+			else
 			{
 				Changed = false;
 				return;
 			}
-			Current = value & mask;
+			Current = value;
 			if (afterGap)
 				Old = Current;
 			Changed = hasValue && Old != Current;
@@ -164,9 +191,11 @@ namespace LiveSplit.UI.Components.SplitSpammer
 	{
 		readonly IGameReader reader;
 		readonly Dictionary<string, Watcher> byName = new Dictionary<string, Watcher>();
-		readonly Dictionary<int, IntWatcher> byAddress = new Dictionary<int, IntWatcher>();
+		readonly Dictionary<MemoryLocation, IntWatcher> intsByLocation = new Dictionary<MemoryLocation, IntWatcher>();
 		readonly Dictionary<MemoryLocation, StringWatcher> stringsByLocation = new Dictionary<MemoryLocation, StringWatcher>();
 		readonly HashSet<Watcher> readThisTick = new HashSet<Watcher>();
+		// The watchers that keep something across reads and drop it on a new context
+		readonly List<Watcher> contextWatchers = new List<Watcher>();
 		int tick;
 		int context;
 
@@ -180,25 +209,33 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		/// An address already watched with the same size gives the same watcher, under this name too; adding a name again
 		/// for the same address does nothing. A name used for another address, or an address with another size, throws.
 		/// </summary>
-		public void Add(string name, int moduleOffset, int bytes = 4)
+		public void Add(string name, int moduleOffset, int bytes = 4) => AddPointer(name, new MemoryLocation(moduleOffset), bytes);
+
+		/// <summary>
+		/// A value of 1, 2 or 4 bytes at a location that can follow pointers, as a MemoryWatcher&lt;int&gt; on a DeepPointer.
+		/// A null pointer on the way is a failed read, which keeps Current, unless <paramref name="whenNull"/> is given: then
+		/// it reads as that value. The same sharing rules as for <see cref="Add"/> apply, per location: the same location
+		/// with another size or another <paramref name="whenNull"/> throws.
+		/// </summary>
+		public void AddPointer(string name, MemoryLocation location, int bytes = 4, int? whenNull = null)
 		{
 			if (bytes != 1 && bytes != 2 && bytes != 4)
 				throw new ArgumentException("A watcher is 1, 2 or 4 bytes, not " + bytes);
 			if (byName.TryGetValue(name, out Watcher named))
 			{
-				if (named is IntWatcher same && same.ModuleOffset == moduleOffset && same.Bytes == bytes)
+				if (named is IntWatcher same && same.Location.Equals(location) && same.Bytes == bytes && same.WhenNull == whenNull)
 					return;
-				throw new ArgumentException($"The watcher name {name} is already used for {Describe(named)}, not {Describe(moduleOffset, bytes)}");
+				throw new ArgumentException($"The watcher name {name} is already used for {Describe(named)}, not {Describe(location, bytes, whenNull)}");
 			}
-			if (byAddress.TryGetValue(moduleOffset, out IntWatcher watcher))
+			if (intsByLocation.TryGetValue(location, out IntWatcher watcher))
 			{
-				if (watcher.Bytes != bytes)
-					throw new ArgumentException($"{name}: {Describe(moduleOffset, bytes)} is already watched as {watcher.Bytes} bytes");
+				if (watcher.Bytes != bytes || watcher.WhenNull != whenNull)
+					throw new ArgumentException($"{name}: {Describe(location, bytes, whenNull)} is already watched as {Describe(watcher)}");
 			}
 			else
 			{
-				watcher = new IntWatcher(moduleOffset, bytes);
-				byAddress.Add(moduleOffset, watcher);
+				watcher = new IntWatcher(location, bytes, whenNull);
+				intsByLocation.Add(location, watcher);
 			}
 			byName.Add(name, watcher);
 		}
@@ -230,10 +267,40 @@ namespace LiveSplit.UI.Components.SplitSpammer
 			byName.Add(name, watcher);
 		}
 
-		static string Describe(Watcher watcher) =>
-			watcher is IntWatcher i ? Describe(i.ModuleOffset, i.Bytes) : Describe(((StringWatcher)watcher).Location, ((StringWatcher)watcher).Bytes);
+		/// <summary>
+		/// playerPosition: CJ's position (<see cref="GetPosition"/>), with tests for being in, entering and leaving a box.
+		/// </summary>
+		public void AddPlayerPosition() => AddSingle("playerPosition", () => new PositionWatcher());
 
-		static string Describe(int moduleOffset, int bytes) => $"{bytes} bytes at +0x{moduleOffset:X}";
+		/// <summary>zone: the label of the zone CJ is in, such as JEF2 (<see cref="GetZone"/>).</summary>
+		public void AddZone() => AddSingle("zone", () => new ZoneWatcher());
+
+		// A watcher of its own kind under one name; adding it again does nothing
+		void AddSingle<T>(string name, Func<T> create) where T : Watcher
+		{
+			if (byName.TryGetValue(name, out Watcher named))
+			{
+				if (named is T)
+					return;
+				throw new ArgumentException($"The watcher name {name} is already used for {Describe(named)}");
+			}
+			T watcher = create();
+			byName.Add(name, watcher);
+			contextWatchers.Add(watcher);
+		}
+
+		static string Describe(Watcher watcher)
+		{
+			switch (watcher)
+			{
+				case IntWatcher i: return Describe(i.Location, i.Bytes, i.WhenNull);
+				case StringWatcher s: return Describe(s.Location, s.Bytes);
+				default: return watcher.GetType().Name;
+			}
+		}
+
+		static string Describe(MemoryLocation location, int bytes, int? whenNull) =>
+			$"{bytes} bytes at {location}" + (whenNull.HasValue ? $" ({whenNull.Value} on a null pointer)" : "");
 
 		static string Describe(MemoryLocation location, int bytes) => $"a string of {bytes} bytes at {location}";
 
@@ -245,6 +312,13 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		/// that another mission also reads is one watcher, whatever name each gives it.
 		/// </summary>
 		public void AddScmMissionLocal(string name, int n) => Add(name, GameAddresses.ScmMissionLocal(n));
+
+		/// <summary>
+		/// vehicleModel: the model id of the vehicle CJ is in (566 Tahoma, 420 Taxi), or -1 while he is in none. Read it as
+		/// "vehicleModel".
+		/// </summary>
+		public void AddVehicleModel() =>
+			AddPointer("vehicleModel", new MemoryLocation(GameAddresses.PlayerVehicle, GameAddresses.ModelIndex), 2, -1);
 
 		/// <summary>Starts a tick: every watcher may be read again.</summary>
 		public void NewTick()
@@ -258,11 +332,20 @@ namespace LiveSplit.UI.Components.SplitSpammer
 		/// was lost. A watcher not read in the previous tick counts its next read as unchanged; one read every tick still
 		/// reports a change across it, since that happened between two ticks.
 		/// </summary>
-		public void NewContext() => context++;
+		public void NewContext()
+		{
+			context++;
+			foreach (Watcher watcher in contextWatchers)
+				watcher.OnNewContext();
+		}
 
 		public IntWatcher Get(string name) => Get<IntWatcher>(name);
 
 		public StringWatcher GetString(string name) => Get<StringWatcher>(name);
+
+		public PositionWatcher GetPosition(string name) => Get<PositionWatcher>(name);
+
+		public ZoneWatcher GetZone(string name) => Get<ZoneWatcher>(name);
 
 		T Get<T>(string name) where T : Watcher
 		{
